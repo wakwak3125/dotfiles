@@ -1,3 +1,8 @@
+call plug#begin('~/.vim/plugged')
+
+Plug 'tyrannicaltoucan/vim-quantum', {'do': 'cp colors/* ~/.vim/colors/'}
+
+call plug#end()
 
 set fenc=utf-8
 
@@ -53,7 +58,8 @@ set hlsearch
 
 nmap <Esc><Esc> :nohlsearch<CR><Esc>
 
-call plug#begin('~/.vim/plugged')
+set background=dark
 
-call plug#end()
+set termguicolors
 
+colorscheme quantum
