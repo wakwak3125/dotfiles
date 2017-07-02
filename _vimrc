@@ -52,3 +52,8 @@ set wrapscan
 set hlsearch
 
 nmap <Esc><Esc> :nohlsearch<CR><Esc>
+
+call plug#begin('~/.vim/plugged')
+
+call plug#end()
+
