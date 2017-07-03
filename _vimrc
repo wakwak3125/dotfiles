@@ -1,6 +1,8 @@
 call plug#begin('~/.vim/plugged')
 
 Plug 'tyrannicaltoucan/vim-quantum', {'do': 'cp colors/* ~/.vim/colors/'}
+Plug 'scrooloose/nerdtree'
+Plug 'itchyny/lightline.vim'
 
 call plug#end()
 
@@ -60,6 +62,10 @@ nmap <Esc><Esc> :nohlsearch<CR><Esc>
 
 set background=dark
 
-set termguicolors
+if has('gui_macvim')
+  set termguicolors
+endif
 
 colorscheme quantum
+
+map <C-e> :NERDTreeToggle<CR>
