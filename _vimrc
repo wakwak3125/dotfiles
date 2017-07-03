@@ -3,6 +3,7 @@ call plug#begin('~/.vim/plugged')
 Plug 'tyrannicaltoucan/vim-quantum', {'do': 'cp colors/* ~/.vim/colors/'}
 Plug 'scrooloose/nerdtree'
 Plug 'itchyny/lightline.vim'
+Plug  'fatih/vim-go'
 
 call plug#end()
 
@@ -69,3 +70,5 @@ endif
 colorscheme quantum
 
 map <C-e> :NERDTreeToggle<CR>
+
+let g:go_fmt_command = "goimports"
