@@ -54,3 +54,4 @@ set hlsearch
 
 nmap <Esc><Esc> :nohlsearch<CR><Esc>
 
+set iminsert=2
