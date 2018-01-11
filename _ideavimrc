@@ -58,3 +58,15 @@ set iminsert=2
 
 set clipboard=unnamed
 
+inoremap <C-a> <C-o>^
+inoremap <C-e> <C-o>$<Right>
+inoremap <C-b> <Left>
+inoremap <C-f> <Right>
+inoremap <C-n> <Down>
+inoremap <C-p> <Up>
+inoremap <C-h> <BS>
+inoremap <C-d> <Del>
+inoremap <C-k> <C-o>D<Right>
+inoremap <C-u> <C-o>d^
+inoremap <C-w> <C-o>db
+
