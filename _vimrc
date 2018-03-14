@@ -3,7 +3,12 @@ call plug#begin('~/.vim/plugged')
 Plug 'tyrannicaltoucan/vim-quantum', {'do': 'cp colors/* ~/.vim/colors/'}
 Plug 'scrooloose/nerdtree'
 Plug 'itchyny/lightline.vim'
-Plug  'fatih/vim-go'
+Plug 'fatih/vim-go'
+Plug 'Shougo/neocomplete'
+Plug 'Shougo/neosnippet'
+Plug 'Shougo/neosnippet-snippets'
+Plug 'tpope/vim-rails'
+Plug 'tpope/vim-endwise'
 
 call plug#end()
 
@@ -59,6 +64,8 @@ set wrapscan
 
 set hlsearch
 
+set clipboard=unnamed,autoselect
+
 nmap <Esc><Esc> :nohlsearch<CR><Esc>
 
 set background=dark
@@ -72,3 +79,5 @@ colorscheme quantum
 map <C-e> :NERDTreeToggle<CR>
 
 let g:go_fmt_command = "goimports"
+
+let NERDTreeShowHidden=1

@@ -1,4 +1,5 @@
 set clipboard+=unnamed
+set incsearch
 
 "インサートモードで bash 風キーマップ
 inoremap <C-a> <C-o>^
