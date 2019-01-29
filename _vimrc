@@ -32,8 +32,6 @@ nnoremap j gj
 
 nnoremap k gk
 
-set list listchars=tab:\▸\-
-
 set expandtab
 
 set tabstop=2
