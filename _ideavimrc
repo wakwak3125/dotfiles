@@ -1,15 +1,73 @@
-set clipboard+=unnamed
+" -------------------------------------
+" オリジナル設定
+"" ------------------------------------
+" 検索するときに大文字小文字を区別しない
+set ignorecase
+
+" 検索時に大文字を含んでいたら大/小を区別
+set smartcase
+
+" インクリメンタル検索 (検索ワードの最初の文字を入力した時点で検索が開始)
 set incsearch
 
-"インサートモードで bash 風キーマップ
-inoremap <C-a> <C-o>^
-inoremap <C-e> <C-o>$<Right>
-inoremap <C-b> <Left>
-inoremap <C-f> <Right>
-inoremap <C-n> <Down>
-inoremap <C-p> <Up>
-inoremap <C-h> <BS>
-inoremap <C-d> <Del>
-inoremap <C-k> <C-o>D<Right>
-inoremap <C-u> <C-o>d^
-inoremap <C-w> <C-o>db
+" 検索対象をハイライト
+set hlsearch
+
+" 対応する括弧やブレースを表示
+set showmatch matchtime=1
+
+" メッセージ表示欄を2行確保
+set cmdheight=2
+
+" ステータス行を常に表示
+set laststatus=2
+
+" ウィンドウの右下にまだ実行していない入力中のコマンドを表示
+set showcmd
+
+" 省略されずに表示
+set display=lastline
+
+" 行末のスペースを可視化
+set listchars=tab:^\ ,trail:~
+
+" ヤンクでクリップボードにコピー
+set clipboard+=unnamed
+
+set clipboard+=unnamedplus
+
+" 対応する括弧を強調表示
+set showmatch
+
+" Escの2回押しでハイライト消去
+nnoremap <Esc><Esc> :nohlsearch<CR><ESC>
+
+" 行をまたいで移動
+set whichwrap=b,s,h,l,<,>,[,],~
+
+" インデント方法の変更
+set cinoptions+=:0
+
+" インデント幅
+set shiftwidth=2
+
+" タブキー押下時に挿入される文字幅を指定
+set softtabstop=2
+
+" -------------------------------------
+" 他人の設定
+" ------------------------------------
+
+"x キー削除でデフォルトレジスタに入れない
+nnoremap x "_x
+vnoremap x "_x
+
+" ヤンクでクリップボードにコピー
+noremap "+y "*y
+noremap "+Y "*Y
+noremap "+p "*p
+noremap "+P "*P
+noremap <C-S-c> "*y
+noremap <C-S-v> "*P
+
+nnoremap / :<C-u>action Find<CR>

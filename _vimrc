@@ -48,7 +48,7 @@ set wrapscan
 
 set hlsearch
 
-set clipboard=unnamed,autoselect
+set clipboard=unnamed,autoselect,unnamedplus
 
 nmap <Esc><Esc> :nohlsearch<CR><Esc>
 
