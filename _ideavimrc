@@ -34,8 +34,6 @@ set listchars=tab:^\ ,trail:~
 " ヤンクでクリップボードにコピー
 set clipboard+=unnamed
 
-set clipboard+=unnamedplus
-
 " 対応する括弧を強調表示
 set showmatch
 
