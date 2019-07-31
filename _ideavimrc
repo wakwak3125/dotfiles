@@ -43,3 +43,5 @@ noremap <C-S-c> "*y
 noremap <C-S-v> "*P
 
 nnoremap / :<C-u>action Find<CR>
+
+nnoremap U :action FindUsages<CR>
