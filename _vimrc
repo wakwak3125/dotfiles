@@ -53,3 +53,6 @@ set clipboard=unnamed,autoselect,unnamedplus
 nmap <Esc><Esc> :nohlsearch<CR><Esc>
 
 set background=dark
+
+set backspace=indent,eol,start
+
