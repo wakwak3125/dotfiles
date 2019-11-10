@@ -1,14 +1,14 @@
 {
 	"windowPosition": [
-		50,
-		50
+		1280,
+		30
 	],
 	"windowSize": [
-		540,
-		380
+		1280,
+		1410
 	],
 	"hyper": {
-		"plugins": "{\"plugins\":[],\"localPlugins\":[]}",
-		"plugin-versions": "[]"
+		"plugins": "{\"plugins\":[\"hypercwd\",\"hyper-statusline\",\"hyper-search\",\"hyper-chesterish\",\"hyper-confirm\"],\"localPlugins\":[]}",
+		"plugin-versions": "[[\"hypercwd\",\"1.4.0\"],[\"hyper-statusline\",\"1.7.6\"],[\"hyper-search\",\"0.4.0\"],[\"hyper-chesterish\",\"1.2.8\"],[\"hyper-confirm\",\"0.2.0\"]]"
 	}
 }
