@@ -4,6 +4,8 @@ Plug 'cocopon/iceberg.vim'
 
 call plug#end()
 
+colorscheme iceberg
+
 set fenc=utf-8
 
 set nobackup

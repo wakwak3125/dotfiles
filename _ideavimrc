@@ -18,7 +18,7 @@ set display=lastline
 
 set listchars=tab:^\ ,trail:~
 
-set clipboard+=unnamed
+set clipboard+=unnamedplus
 
 set showmatch
 

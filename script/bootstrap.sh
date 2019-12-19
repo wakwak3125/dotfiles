@@ -1,19 +1,13 @@
 if [ -e $HOME/.vimrc ]; then
 	echo '.vimrc found'
 else
-	ln -s _vimrc $HOME/.vimrc
-fi
-
-if [ -e $HOME/.gvimrc ]; then
-	echo '.gvimrc found'
-else
-	ln -s _gvimrc $HOME/.gvimrc
+	ln -sf $HOME/dotfiles/_vimrc ~/.vimrc
 fi
 
 if [ -e $HOME/.ideavimrc ]; then
 	echo '.ideavimrc found'
 else
-	ln -s _ideavimrc $HOME/.ideavimrc
+	ln -s $HOME/dotfiles/_ideavimrc $HOME/.ideavimrc
 fi
 
 if [ -e $HOME/.fzf ]; then
@@ -21,6 +15,12 @@ if [ -e $HOME/.fzf ]; then
 else
 	git clone --depth 1 https://github.com/junegunn/fzf.git ~/.fzf
 	~/.fzf/install
+fi
+
+if [ -e $HOME/.vim/autoload/plug.vim ]; then
+  echo 'plug.vim found'
+else
+  curl -fLo ~/.vim/autoload/plug.vim --create-dirs https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim
 fi
 
 mkdir ./_vim/plugged
