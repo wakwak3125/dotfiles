@@ -32,6 +32,8 @@ set shiftwidth=2
 
 set softtabstop=2
 
+set surround
+
 nnoremap x "_x
 vnoremap x "_x
 
