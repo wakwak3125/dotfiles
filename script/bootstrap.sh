@@ -2,28 +2,22 @@
 
 cd `dirname $0`
 ROOT=`dirname $(pwd)`
+CONFIG_DIR='~/.config'
 
 ln -sfv $ROOT/_vimrc $HOME/.vimrc
 ln -sfv $ROOT/_ideavimrc $HOME/.ideavimrc
 
-if [ -e $HOME/.fzf ]; then
-  echo '.fzf found'
-else
-  git clone --depth 1 https://github.com/junegunn/fzf.git ~/.fzf
-  $HOME/.fzf/install
+if [ ! -d ~/.config/tmux ]; then
+  mkdir -p ~/.config/tmux
+  echo '~/.config/tmux was created'
 fi
 
-if [ -e $HOME/.vim/autoload/plug.vim ]; then
-  echo 'plug.vim found'
-else
-  curl -fLo ~/.vim/autoload/plug.vim --create-dirs https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim
+ln -sfv $ROOT/config/tmux/tmux.conf $HOME/.config/tmux/tmux.conf
+
+if [ ! -d ~/.config/alacritty ]; then
+  mkdir -p ~/.config/alacritty
+  echo '~/.config/alacritty was created'
 fi
 
-if !(type "brew" > /dev/null 2>&1); then
-  curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh
-  echo "eval $(/home/linuxbrew/.linuxbrew/bin/brew shellenv)" >> $HOME/.zshrc
-fi
+ln -sfv $ROOT/config/alacritty/alacritty.yml $HOME/.config/alacritty/alacritty.yml
 
-brew update
-brew install ghq anyenv zplug
-anyenv install --force-init
