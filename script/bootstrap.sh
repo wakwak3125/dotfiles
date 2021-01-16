@@ -6,6 +6,9 @@ CONFIG_DIR='~/.config'
 
 ln -sfv $ROOT/_vimrc $HOME/.vimrc
 ln -sfv $ROOT/_ideavimrc $HOME/.ideavimrc
+ln -sfv $ROOT/zsh $HOME/.zsh
+ln -sfv $ROOT/zshenv $HOME/.zshenv
+
 
 if [ ! -d ~/.config/tmux ]; then
   mkdir -p ~/.config/tmux
