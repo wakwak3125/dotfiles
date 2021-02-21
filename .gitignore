@@ -2,3 +2,6 @@ _vim/colors/
 _vim/plugged/
 zsh/.zshrc_local
 zsh/.zsh_history
+zsh/.zcompdump
+zsh/.zsh_local
+
