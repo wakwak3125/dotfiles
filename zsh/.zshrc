@@ -25,7 +25,7 @@ setopt pushd_ignore_dups
 DIRSTACKSIZE=100
 
 ## alias
-alias ll='ls -lhaG'
+alias ll='ls -lhaG --color=auto'
 alias vi='vim'
 alias g='git'
 alias gs='git switch'
