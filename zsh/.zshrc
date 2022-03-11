@@ -31,6 +31,7 @@ alias g='git'
 alias gs='git switch'
 alias gsc='git switch -c'
 alias gitpr='git pull-request'
+alias gitbr='git browse'
 alias pr='pull-request'
 eval "$(hub alias -s)"
 
@@ -41,13 +42,12 @@ eval "$(direnv hook zsh)"
 ## Zplug
 source $ZPLUG_HOME/init.zsh
 zplug 'zplug/zplug', hook-build:'zplug --self-manage'
-zplug 'mafredri/zsh-async'
-zplug 'sindresorhus/pure'
+zplug 'mafredri/zsh-async', from:github
+zplug 'sindresorhus/pure', use:pure.zsh, from:github, as:theme
 zplug 'zsh-users/zsh-syntax-highlighting'
 zplug "zsh-users/zsh-history-substring-search"
 zplug "zsh-users/zsh-autosuggestions"
 zplug "zsh-users/zsh-completions"
-zplug "chrissicool/zsh-256color"
 zplug "junegunn/fzf-bin", as:command, from:gh-r, rename-to:fzf
 zplug "mollifier/anyframe"
 zstyle ':completion:*' menu select
