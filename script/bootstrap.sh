@@ -15,7 +15,7 @@ if [ ! -d ~/.config/tmux ]; then
   echo '~/.config/tmux was created'
 fi
 
-ln -sfv $ROOT/config/tmux/tmux.conf .tmux.conf
+ln -sfv $ROOT/config/tmux/tmux.conf $HOME/.tmux.conf
 
 if [ ! -d ~/.config/alacritty ]; then
   mkdir -p ~/.config/alacritty

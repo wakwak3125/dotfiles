@@ -2,6 +2,18 @@
 
 source $ZDOTDIR/.zshrc_local
 
+#zplug
+export ZPLUG_HOME=$HOME/.zplug
+
+#sdkman
+export SDKMAN_DIR="$HOME/.sdkman"
+export JAVA_HOME=$HOME/.sdkman/candidates/java/current
+
+#golang
+export GOPATH=$HOME/go
+export GOBIN=$GOPATH/bin
+export PATH=$PATH:$GOBIN
+
 EDITOR=vim
 bindkey -e
 autoload -Uz add-zsh-hook
@@ -88,3 +100,6 @@ if [[ ! -n $TMUX && $- == *l* ]]; then
   fi
 fi
 
+
+#THIS MUST BE AT THE END OF THE FILE FOR SDKMAN TO WORK!!!
+[[ -s "$HOME/.sdkman/bin/sdkman-init.sh" ]] && source "$HOME/.sdkman/bin/sdkman-init.sh"
