@@ -14,6 +14,12 @@ export GOPATH=$HOME/go
 export GOBIN=$GOPATH/bin
 export PATH=$PATH:$GOBIN
 
+#rust
+export PATH=$PATH:$HOME/.cargo/bin
+
+#anyenv
+export PATH=$PATH:$HOME/.anyenv/bin
+
 EDITOR=vim
 bindkey -e
 autoload -Uz add-zsh-hook
@@ -50,28 +56,7 @@ eval "$(hub alias -s)"
 ## Env
 eval "$(anyenv init - zsh)"
 eval "$(direnv hook zsh)"
-
-## Zplug
-source $ZPLUG_HOME/init.zsh
-zplug 'zplug/zplug', hook-build:'zplug --self-manage'
-zplug 'mafredri/zsh-async', from:github
-zplug 'sindresorhus/pure', use:pure.zsh, from:github, as:theme
-zplug 'zsh-users/zsh-syntax-highlighting'
-zplug "zsh-users/zsh-history-substring-search"
-zplug "zsh-users/zsh-autosuggestions"
-zplug "zsh-users/zsh-completions"
-zplug "junegunn/fzf-bin", as:command, from:gh-r, rename-to:fzf
-zplug "mollifier/anyframe"
-zstyle ':completion:*' menu select
-
-if ! zplug check --verbose; then
-    printf "Install? [y/N]: "
-    if read -q; then
-        echo; zplug install
-    fi
-fi
-
-zplug load
+eval "$(sheldon source)"
 
 ## anyframe
 bindkey '^r' anyframe-widget-execute-history

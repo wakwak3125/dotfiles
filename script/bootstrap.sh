@@ -24,3 +24,9 @@ fi
 
 ln -sfv $ROOT/config/alacritty/alacritty.yml $HOME/.config/alacritty/alacritty.yml
 
+if [ ! -d ~/.config/sheldon ]; then
+  mkdir -p ~/.config/sheldon
+  echo '~/.config/sheldon was created'
+fi
+
+ln -sfv $ROOT/config/sheldon/plugins.toml $HOME/.config/sheldon/plugins.toml
