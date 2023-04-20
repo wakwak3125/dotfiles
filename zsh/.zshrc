@@ -1,9 +1,11 @@
 # Created by newuser for 5.8
 
-source $ZDOTDIR/.zshrc_local
+fpath=( 
+  $HOME/.zsh/functions 
+  "${fpath[@]}"
+)
 
-#zplug
-export ZPLUG_HOME=$HOME/.zplug
+source $ZDOTDIR/.zshrc_local
 
 #sdkman
 export SDKMAN_DIR="$HOME/.sdkman"
@@ -27,6 +29,9 @@ setopt auto_cd
 setopt extended_glob
 setopt correct
 setopt interactive_comments
+autoload -Uz compinit
+compinit
+zstyle ':completion:*:default' menu select=2
 
 ## History
 HISTFILE=~/.zsh/.zsh_history
@@ -46,12 +51,6 @@ DIRSTACKSIZE=100
 alias ll='ls -lhaG --color=auto'
 alias vi='vim'
 alias g='git'
-alias gs='git switch'
-alias gsc='git switch -c'
-alias gitpr='git pull-request'
-alias gitbr='git browse'
-alias pr='pull-request'
-eval "$(hub alias -s)"
 
 ## Env
 eval "$(anyenv init - zsh)"
@@ -84,7 +83,6 @@ if [[ ! -n $TMUX && $- == *l* ]]; then
     :  # Start terminal normally
   fi
 fi
-
 
 #THIS MUST BE AT THE END OF THE FILE FOR SDKMAN TO WORK!!!
 [[ -s "$HOME/.sdkman/bin/sdkman-init.sh" ]] && source "$HOME/.sdkman/bin/sdkman-init.sh"
