@@ -1,49 +1,33 @@
+Plug 'easymotion/vim-easymotion'
+
 set ignorecase
-
 set smartcase
-
 set incsearch
-
 set hlsearch
-
 set showmatch matchtime=1
-
 set cmdheight=2
-
 set laststatus=2
-
 set showcmd
-
 set display=lastline
-
 set listchars=tab:^\ ,trail:~
-
 set clipboard+=unnamed
-
 set showmatch
-
-nnoremap <Esc><Esc> :nohlsearch<CR><ESC>
-
 set whichwrap=b,s,h,l,<,>,[,],~
-
 set cinoptions+=:0
-
 set shiftwidth=2
-
 set softtabstop=2
-
 set surround
+set keep-english-in-normal	
 
-nnoremap x "_x
 vnoremap x "_x
-
+nnoremap x "_x
 noremap "+y "*y
 noremap "+Y "*Y
 noremap "+p "*p
 noremap "+P "*P
 noremap <C-S-c> "*y
 noremap <C-S-v> "*P
-
 nnoremap / :<C-u>action Find<CR>
-
 nnoremap U :action FindUsages<CR>
+nnoremap <Esc><Esc> :nohlsearch<CR><ESC>
+

@@ -58,7 +58,7 @@ eval "$(direnv hook zsh)"
 eval "$(sheldon source)"
 
 ## anyframe
-bindkey '^r' anyframe-widget-execute-history
+bindkey '^r' anyframe-widget-put-history
 bindkey '^g' anyframe-widget-cd-ghq-repository
 bindkey '^xs' anyframe-widget-tmux-attach
 bindkey '^xk' anyframe-widget-kill
