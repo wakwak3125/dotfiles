@@ -66,7 +66,7 @@ bindkey '^xk' anyframe-widget-kill
 PERCOL=fzf
 
 ## Launch tmux
-if [[ ! -n $TMUX && $- == *l* ]]; then
+if [[ ! -n $TMUX && -o login ]]; then
   # get the IDs
   ID="`tmux list-sessions`"
   if [[ -z "$ID" ]]; then
