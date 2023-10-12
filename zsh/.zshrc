@@ -84,5 +84,28 @@ if [[ ! -n $TMUX && -o login ]]; then
   fi
 fi
 
+fancy-ctrl-z () {
+  if [[ $#BUFFER -eq 0 ]]; then
+    BUFFER="fg"
+    zle accept-line
+  else
+    zle push-input
+    zle clear-screen
+  fi
+}
+zle -N fancy-ctrl-z
+bindkey '^Z' fancy-ctrl-z
+
+function fgg() {
+    wc=$(jobs | wc -l | tr -d ' ')
+    if [ $wc -ne 0 ]; then
+        job=$(jobs | awk -F "suspended" "{print $1 $2}"|sed -e "s/\-//g" -e "s/\+//g" -e "s/\[//g" -e "s/\]//g" | grep -v pwd | fzf | awk "{print $1}")
+        wc_grep=$(echo $job | grep -v grep | grep 'suspended')
+        if [ "$wc_grep" != "" ]; then
+            fg %$job
+        fi
+    fi
+}
+
 #THIS MUST BE AT THE END OF THE FILE FOR SDKMAN TO WORK!!!
 [[ -s "$HOME/.sdkman/bin/sdkman-init.sh" ]] && source "$HOME/.sdkman/bin/sdkman-init.sh"

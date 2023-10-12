@@ -1,5 +1,11 @@
 Plug 'easymotion/vim-easymotion'
 
+let mapleader = "\<Space>"
+
+set easymotion
+set surround
+set keep-english-in-normal	
+
 set ignorecase
 set smartcase
 set incsearch
@@ -16,8 +22,6 @@ set whichwrap=b,s,h,l,<,>,[,],~
 set cinoptions+=:0
 set shiftwidth=2
 set softtabstop=2
-set surround
-set keep-english-in-normal	
 
 vnoremap x "_x
 nnoremap x "_x
