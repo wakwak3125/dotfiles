@@ -6,6 +6,7 @@ CONFIG_DIR='~/.config'
 
 ln -sfv $ROOT/vimrc $HOME/.vimrc
 ln -sfv $ROOT/ideavimrc $HOME/.ideavimrc
+ln -sfv $ROOT/obsidian.vimrc $HOME/.obsidian.vimrc
 ln -sfv $ROOT/zsh $HOME/.zsh
 ln -sfv $ROOT/zshenv $HOME/.zshenv
 
