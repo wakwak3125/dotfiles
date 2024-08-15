@@ -31,3 +31,10 @@ if [ ! -d ~/.config/sheldon ]; then
 fi
 
 ln -sfv $ROOT/config/sheldon/plugins.toml $HOME/.config/sheldon/plugins.toml
+
+if [ ! -d ~/.config/git ]; then
+  mkdir -p ~/.config/git
+  echo '~/.config/git was created'
+fi
+
+ln -sfv $ROOT/config/git/ignore $HOME/.config/git/ignore
