@@ -8,6 +8,7 @@ call plug#begin('~/.vim/plugged')
 Plug 'nordtheme/vim'
 call plug#end()
 
+syntax enable
 colorscheme nord
 
 set fenc=utf-8
