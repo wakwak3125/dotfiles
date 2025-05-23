@@ -1,3 +1,5 @@
 .DS_Store
 .idea/csv-editor.xml
+buildSrc/.kotlin
+.idea/AndroidProjectSystem.xml
 

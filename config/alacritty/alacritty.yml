@@ -4,12 +4,17 @@
 #     - -l
 #     - -c
 #     - 'tmux attach || tmux'
+env:
+  TERM: alacritty
 font:
-  size: 13
+  size: 15
+  offset:
+    x: 1
+    y: 1
   normal:
-    family: JetBrains Mono
+    family: "PlemolJP Console NF"
   bold:
-    family: JetBrains Mono
+    family: "PlemolJP Console NF"
     style: bold
   window:
     dynamic_title: true
