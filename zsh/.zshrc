@@ -19,9 +19,6 @@ export PATH=$PATH:$GOBIN
 #rust
 export PATH=$PATH:$HOME/.cargo/bin
 
-#anyenv
-export PATH=$PATH:$HOME/.anyenv/bin
-
 EDITOR=vim
 bindkey -e
 autoload -Uz add-zsh-hook
@@ -53,8 +50,6 @@ alias vi='vim'
 alias g='git'
 
 ## Env
-eval "$(anyenv init - zsh)"
-eval "$(direnv hook zsh)"
 eval "$(sheldon source)"
 
 ## anyframe
