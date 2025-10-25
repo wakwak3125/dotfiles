@@ -60,7 +60,6 @@ else
     pkg-config \
     fzf \
     ripgrep \
-    xsel \
     neovim
 fi
 
@@ -79,3 +78,5 @@ echo 'export VISUAL=nvim'  >> ~/.profile
 git config --global user.name "Ryo Sakaguchi"
 git config --global user.email "rsakaguchi3125@gmail.com"
 git config --global core.editor "nvim"
+git config --global ghq.root $HOME/src
+
