@@ -48,7 +48,6 @@ fi
 # LinuxかmacOSかを分岐してパッケージをインストールする
 if [ "$(uname)" == "Darwin" ]; then
   # macOSの場合
-  # TODO: Homebrewのインストールも行う
 else
   # Linuxの場合
   sudo apt update
