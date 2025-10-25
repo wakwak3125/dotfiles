@@ -51,7 +51,6 @@ if [ "$(uname)" == "Darwin" ]; then
   # TODO: Homebrewのインストールも行う
 else
   # Linuxの場合
-  sudo add-apt-repository -y ppa:neovim-ppa/stable
   sudo apt update
   sudo apt install -y \
     build-essential \
@@ -59,8 +58,19 @@ else
     libssl-dev \
     pkg-config \
     fzf \
-    ripgrep \
-    neovim
+    ripgrep
+  # Neovimのインストール
+  curl -LO https://github.com/neovim/neovim/releases/latest/download/nvim-linux-x86_64.tar.gz
+  sudo rm -rf /opt/nvim-linux-x86_64
+  sudo tar -C /opt -xzf nvim-linux-x86_64.tar.gz
+  echo 'export PATH=/opt/nvim-linux-x86_64/bin:$PATH' >> ~/.zsh/.zshrc_local
+
+  # NeovimをVimのデフォルトに設定
+  NVIM_PATH="/opt/nvim-linux-x86_64/bin/nvim"
+  sudo update-alternatives --install /usr/bin/vim vim $NVIM_PATH 100
+  sudo update-alternatives --install /usr/bin/vi vi $NVIM_PATH 100
+  sudo update-alternatives --set vim $NVIM_PATH
+  sudo update-alternatives --set vi $NVIM_PATH
 fi
 
 # 言語のインストール
@@ -70,13 +80,7 @@ mise use -g go
 # ツールのインストール
 mise use ghq
 
-# デフォルトエディタをNeovimに設定する
-echo 'export EDITOR=nvim'  >> ~/.profile
-echo 'export VISUAL=nvim'  >> ~/.profile
-
 # gitの設定
 git config --global user.name "Ryo Sakaguchi"
 git config --global user.email "rsakaguchi3125@gmail.com"
-git config --global core.editor "nvim"
 git config --global ghq.root $HOME/src
-
