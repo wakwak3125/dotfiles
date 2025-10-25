@@ -84,3 +84,4 @@ mise use ghq
 git config --global user.name "Ryo Sakaguchi"
 git config --global user.email "rsakaguchi3125@gmail.com"
 git config --global ghq.root $HOME/src
+git config --global core.editor "nvim"
