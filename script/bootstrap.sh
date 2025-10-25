@@ -9,7 +9,7 @@ ln -sfv $ROOT/ideavimrc $HOME/.ideavimrc
 ln -sfv $ROOT/obsidian.vimrc $HOME/.obsidian.vimrc
 ln -sfv $ROOT/zsh $HOME/.zsh
 ln -sfv $ROOT/zshenv $HOME/.zshenv
-
+ln -sfv $ROOT/nvim $CONFIG_DIR/nvim
 
 if [ ! -d ~/.config/tmux ]; then
   mkdir -p ~/.config/tmux
@@ -38,3 +38,44 @@ if [ ! -d ~/.config/git ]; then
 fi
 
 ln -sfv $ROOT/config/git/ignore $HOME/.config/git/ignore
+
+# 必要なパッケージをインストールする
+
+if ! command -v mise &> /dev/null; then
+  curl https://mise.run | sh
+fi
+
+# LinuxかmacOSかを分岐してパッケージをインストールする
+if [ "$(uname)" == "Darwin" ]; then
+  # macOSの場合
+  # TODO: Homebrewのインストールも行う
+else
+  # Linuxの場合
+  sudo add-apt-repository -y ppa:neovim-ppa/stable
+  sudo apt update
+  sudo apt install -y \
+    build-essential \
+    openssl \
+    libssl-dev \
+    pkg-config \
+    fzf \
+    ripgrep \
+    xsel \
+    neovim
+fi
+
+# 言語のインストール
+mise use -g rust
+mise use -g go
+
+# ツールのインストール
+mise use ghq
+
+# デフォルトエディタをNeovimに設定する
+echo 'export EDITOR=nvim'  >> ~/.profile
+echo 'export VISUAL=nvim'  >> ~/.profile
+
+# gitの設定
+git config --global user.name "Ryo Sakaguchi"
+git config --global user.email "rsakaguchi3125@gmail.com"
+git config --global core.editor "nvim"
