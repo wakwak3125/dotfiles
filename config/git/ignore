@@ -3,3 +3,5 @@
 buildSrc/.kotlin
 .idea/AndroidProjectSystem.xml
 
+
+**/.claude/settings.local.json
