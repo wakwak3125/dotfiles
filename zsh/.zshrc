@@ -61,15 +61,8 @@ bindkey '^xk' anyframe-widget-kill
 
 PERCOL=fzf
 
-if [[ ! -n $TMUX && $- == *l* ]]; then
-  # get the IDs
-  ID="`tmux list-sessions`"
-  if [[ -z "$ID" ]]; then
-    tmux new-session
-  fi
-  ID="`echo $ID | cut -d: -f1`"
-  tmux attach-session -t "$ID"
-fi
+# tmux auto-attach (loaded from functions directory)
+# To disable, add AUTO_TMUX=false to ~/.zsh/.zshrc_local
 
 fancy-ctrl-z () {
   if [[ $#BUFFER -eq 0 ]]; then

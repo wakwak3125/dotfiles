@@ -1,0 +1,78 @@
+# tmux auto-attach function
+# Smart tmux auto-attach for macOS and WSL
+# Supports: macOS, WSL2, Linux
+# Excludes: VSCode, JetBrains IDEs, SSH sessions (optional)
+
+tmux-auto-attach() {
+  # 設定: tmux自動起動を有効にするか（~/.zshrc_localで上書き可能）
+  local AUTO_TMUX="${AUTO_TMUX:-true}"
+
+  # 無効化されている場合はスキップ
+  if [[ "$AUTO_TMUX" != "true" ]]; then
+    return 0
+  fi
+
+  # 既にtmux内にいる場合はスキップ
+  if [[ -n "$TMUX" ]]; then
+    return 0
+  fi
+
+  # ログインシェルでない場合はスキップ
+  if [[ ! "$-" == *l* ]]; then
+    return 0
+  fi
+
+  # tmuxがインストールされていない場合はスキップ
+  if ! command -v tmux &> /dev/null; then
+    return 0
+  fi
+
+  # IDEターミナルの検出と除外
+  # VSCode
+  if [[ -n "$VSCODE_INJECTION" ]] || [[ "$TERM_PROGRAM" == "vscode" ]]; then
+    return 0
+  fi
+
+  # JetBrains IDEs (IntelliJ, PyCharm, etc.)
+  if [[ -n "$TERMINAL_EMULATOR" ]] && [[ "$TERMINAL_EMULATOR" =~ "JetBrains" ]]; then
+    return 0
+  fi
+
+  # 環境検出
+  local OS_TYPE=""
+  if [[ "$(uname)" == "Darwin" ]]; then
+    OS_TYPE="macos"
+  elif grep -qEi "(Microsoft|WSL)" /proc/version 2>/dev/null; then
+    OS_TYPE="wsl"
+  else
+    OS_TYPE="linux"
+  fi
+
+  # セッション名を環境に応じて決定
+  local SESSION_NAME=""
+  case "$OS_TYPE" in
+    macos)
+      SESSION_NAME="main"
+      ;;
+    wsl)
+      # WSLの場合、ディストリビューション名を含める
+      local WSL_DISTRO="${WSL_DISTRO_NAME:-wsl}"
+      SESSION_NAME="wsl-${WSL_DISTRO}"
+      ;;
+    linux)
+      SESSION_NAME="main"
+      ;;
+  esac
+
+  # tmuxセッションの起動/アタッチ
+  if tmux has-session -t "$SESSION_NAME" 2>/dev/null; then
+    # 既存のセッションにアタッチ
+    exec tmux attach-session -t "$SESSION_NAME"
+  else
+    # 新規セッションを作成
+    exec tmux new-session -s "$SESSION_NAME"
+  fi
+}
+
+# 関数を実行
+tmux-auto-attach
