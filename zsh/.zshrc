@@ -19,7 +19,6 @@ export PATH=$PATH:$GOBIN
 #rust
 export PATH=$PATH:$HOME/.cargo/bin
 
-EDITOR=vim
 bindkey -e
 autoload -Uz add-zsh-hook
 #setopt auto_cd
@@ -46,7 +45,6 @@ DIRSTACKSIZE=100
 
 ## alias
 alias ll='ls -lhaG --color=auto'
-alias vi='vim'
 alias g='git'
 
 ## Env

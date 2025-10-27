@@ -49,9 +49,8 @@ NVIM_PATH="$NVIM_BIN_PATH/nvim"
 
 if [ "$OS" == "Darwin" ]; then
   # macOSの場合はシンボリックリンクを作成
-  sudo ln -sf $NVIM_PATH /usr/local/bin/vim
-  sudo ln -sf $NVIM_PATH /usr/local/bin/vi
-  sudo ln -sf $NVIM_PATH /usr/local/bin/nvim
+  echo 'alias vim="nvim"' >> ~/.zsh/.zshrc_local
+  echo 'alias vi="nvim"' >> ~/.zsh/.zshrc_local
 else
   # Linuxの場合はupdate-alternativesを使用
   sudo update-alternatives --install /usr/bin/vim vim $NVIM_PATH 100
