@@ -1,9 +1,3 @@
-# shell:
-#   program: /bin/zsh
-#   args:
-#     - -l
-#     - -c
-#     - 'tmux attach || tmux'
 env:
   TERM: alacritty
 font:

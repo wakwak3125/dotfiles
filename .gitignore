@@ -6,3 +6,4 @@ zsh/.zcompdump
 zsh/.zsh_local
 zsh/.zsh_sessions
 *.backup
+zsh/.zcompcache
