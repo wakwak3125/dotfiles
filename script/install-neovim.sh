@@ -60,6 +60,8 @@ else
   sudo update-alternatives --set vi $NVIM_PATH
 fi
 
+git config --global core.editor "nvim"
+
 echo "Neovim installation completed successfully!"
 echo "Installed at: $NVIM_PATH"
 echo "Please restart your shell or run: source ~/.zshenv"

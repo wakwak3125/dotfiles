@@ -8,7 +8,7 @@ ln -sfv $ROOT/ideavimrc $HOME/.ideavimrc
 ln -sfv $ROOT/obsidian.vimrc $HOME/.obsidian.vimrc
 ln -sfv $ROOT/zsh $HOME/.zsh
 ln -sfv $ROOT/zshenv $HOME/.zshenv
-ln -sfv $ROOT/nvim $CONFIG_DIR/nvim
+ln -sfv $ROOT/nvim $HOME/.config/nvim
 
 if [ ! -d ~/.config/tmux ]; then
   mkdir -p ~/.config/tmux
@@ -47,6 +47,7 @@ fi
 # LinuxかmacOSかを分岐してパッケージをインストールする
 if [ "$(uname)" == "Darwin" ]; then
   # macOSの場合
+  $ROOT/script/install-neovim.sh
 else
   # Linuxの場合
   sudo apt update
@@ -73,5 +74,3 @@ mise use ghq
 git config --global user.name "Ryo Sakaguchi"
 git config --global user.email "rsakaguchi3125@gmail.com"
 git config --global ghq.root $HOME/src
-git config --global core.editor "nvim"
-
