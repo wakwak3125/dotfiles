@@ -61,6 +61,8 @@ PERCOL=fzf
 
 # tmux auto-attach (loaded from functions directory)
 # To disable, add AUTO_TMUX=false to ~/.zsh/.zshrc_local
+autoload -Uz tmux-auto-attach
+tmux-auto-attach
 
 fancy-ctrl-z () {
   if [[ $#BUFFER -eq 0 ]]; then
