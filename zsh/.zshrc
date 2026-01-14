@@ -52,13 +52,32 @@ eval "$(sheldon source)"
 eval "$(~/.local/bin/mise activate zsh)"
 eval "$(direnv hook zsh)"
 
-## anyframe
-bindkey '^r' anyframe-widget-put-history
-bindkey '^g' anyframe-widget-cd-ghq-repository
-bindkey '^xs' anyframe-widget-tmux-attach
-bindkey '^xk' anyframe-widget-kill
+## fzf widgets (replacing anyframe)
+# 履歴検索
+function fzf-history-widget() {
+  local selected
+  selected=$(history -n -r 1 | fzf --query="$LBUFFER" --no-sort)
+  if [[ -n "$selected" ]]; then
+    BUFFER="$selected"
+    CURSOR=$#BUFFER
+  fi
+  zle reset-prompt
+}
+zle -N fzf-history-widget
+bindkey '^r' fzf-history-widget
 
-PERCOL=fzf
+# ghqリポジトリ移動
+function fzf-ghq-widget() {
+  local selected
+  selected=$(ghq list -p | fzf --query="$LBUFFER")
+  if [[ -n "$selected" ]]; then
+    BUFFER="cd ${(q)selected}"
+    zle accept-line
+  fi
+  zle reset-prompt
+}
+zle -N fzf-ghq-widget
+bindkey '^g' fzf-ghq-widget
 
 # tmux auto-attach (loaded from functions directory)
 # To disable, add AUTO_TMUX=false to ~/.zsh/.zshrc_local
