@@ -7,7 +7,7 @@ return {
   },
 
   -- Telescope（検索）
-  { "nvim-lua/plenary.nvim", lazy = true },
+  { "nvim-lua/plenary.nvim",   lazy = true },
   {
     "nvim-telescope/telescope.nvim",
     cmd = "Telescope",
@@ -49,8 +49,8 @@ return {
         "json", "yaml", "bash", "typescript", "tsx", "javascript",
         "go", "rust", "python"
       },
-      highlight = { enable = true },
-      indent    = { enable = true },
+      highlight        = { enable = true },
+      indent           = { enable = true },
     },
     config = function(_, opts)
       require("nvim-treesitter.configs").setup(opts)
@@ -71,38 +71,37 @@ return {
       local lsp = require("lspconfig")
       local mason_lsp = require("mason-lspconfig")
 
-      -- 必要なサーバをここで増減
-      mason_lsp.setup({
-        ensure_installed = { "lua_ls", "tsserver", "gopls", "rust_analyzer", "pyright" },
-        automatic_installation = true,
-      })
-
       local capabilities = vim.lsp.protocol.make_client_capabilities()
       local ok_cmp, cmp_lsp = pcall(require, "cmp_nvim_lsp")
       if ok_cmp then capabilities = cmp_lsp.default_capabilities(capabilities) end
 
-      mason_lsp.setup_handlers({
-        function(server)
-          lsp[server].setup({ capabilities = capabilities })
-        end,
-        ["lua_ls"] = function()
-          lsp.lua_ls.setup({
-            capabilities = capabilities,
-            settings = {
-              Lua = {
-                diagnostics = { globals = { "vim" } },
-                workspace = { checkThirdParty = false },
+      -- 必要なサーバをここで増減
+      mason_lsp.setup({
+        ensure_installed = { "lua_ls", "ts_ls", "gopls", "rust_analyzer", "pyright" },
+        automatic_installation = true,
+        handlers = {
+          function(server)
+            lsp[server].setup({ capabilities = capabilities })
+          end,
+          ["lua_ls"] = function()
+            lsp.lua_ls.setup({
+              capabilities = capabilities,
+              settings = {
+                Lua = {
+                  diagnostics = { globals = { "vim" } },
+                  workspace = { checkThirdParty = false },
+                },
               },
-            },
-          })
-        end,
+            })
+          end,
+        },
       })
 
       -- LSPキーマップ（必要最低限）
       local map = vim.keymap.set
       map("n", "gd", vim.lsp.buf.definition, { desc = "LSP: Go to definition" })
       map("n", "gr", vim.lsp.buf.references, { desc = "LSP: References" })
-      map("n", "K",  vim.lsp.buf.hover, { desc = "LSP: Hover" })
+      map("n", "K", vim.lsp.buf.hover, { desc = "LSP: Hover" })
       map("n", "<leader>rn", vim.lsp.buf.rename, { desc = "LSP: Rename" })
       map({ "n", "v" }, "<leader>ca", vim.lsp.buf.code_action, { desc = "LSP: Code Action" })
       map("n", "gl", vim.diagnostic.open_float, { desc = "Line Diagnostics" })
@@ -136,14 +135,22 @@ return {
           ["<C-Space>"] = cmp.mapping.complete(),
           ["<CR>"] = cmp.mapping.confirm({ select = true }),
           ["<Tab>"] = cmp.mapping(function(fallback)
-            if cmp.visible() then cmp.select_next_item()
-            elseif luasnip.expand_or_jumpable() then luasnip.expand_or_jump()
-            else fallback() end
+            if cmp.visible() then
+              cmp.select_next_item()
+            elseif luasnip.expand_or_jumpable() then
+              luasnip.expand_or_jump()
+            else
+              fallback()
+            end
           end, { "i", "s" }),
           ["<S-Tab>"] = cmp.mapping(function(fallback)
-            if cmp.visible() then cmp.select_prev_item()
-            elseif luasnip.jumpable(-1) then luasnip.jump(-1)
-            else fallback() end
+            if cmp.visible() then
+              cmp.select_prev_item()
+            elseif luasnip.jumpable(-1) then
+              luasnip.jump(-1)
+            else
+              fallback()
+            end
           end, { "i", "s" }),
         }),
         sources = {
@@ -262,5 +269,3 @@ return {
     opts = {},
   },
 }
-
-
