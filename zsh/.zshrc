@@ -50,6 +50,7 @@ alias g='git'
 ## Env
 eval "$(sheldon source)"
 eval "$(~/.local/bin/mise activate zsh)"
+eval "$(direnv hook zsh)"
 
 ## anyframe
 bindkey '^r' anyframe-widget-put-history
