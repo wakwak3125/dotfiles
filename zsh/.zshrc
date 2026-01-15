@@ -66,13 +66,30 @@ function fzf-history-widget() {
 zle -N fzf-history-widget
 bindkey '^r' fzf-history-widget
 
-# ghqリポジトリ移動
+# ghqリポジトリ移動 + tmuxセッション
 function fzf-ghq-widget() {
-  local selected
+  local selected session_name
   selected=$(ghq list -p | fzf --query="$LBUFFER")
   if [[ -n "$selected" ]]; then
-    BUFFER="cd ${(q)selected}"
-    zle accept-line
+    # リポジトリ名をセッション名に（.を_に置換）
+    session_name=$(basename "$selected" | tr '.' '_')
+
+    if [[ -n "$TMUX" ]]; then
+      # tmux内の場合
+      if tmux has-session -t "$session_name" 2>/dev/null; then
+        tmux switch-client -t "$session_name"
+      else
+        tmux new-session -d -s "$session_name" -c "$selected"
+        tmux switch-client -t "$session_name"
+      fi
+    else
+      # tmux外の場合
+      if tmux has-session -t "$session_name" 2>/dev/null; then
+        tmux attach-session -t "$session_name"
+      else
+        tmux new-session -s "$session_name" -c "$selected"
+      fi
+    fi
   fi
   zle reset-prompt
 }
