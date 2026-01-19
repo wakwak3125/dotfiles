@@ -96,6 +96,67 @@ function fzf-ghq-widget() {
 zle -N fzf-ghq-widget
 bindkey '^g' fzf-ghq-widget
 
+# git worktree移動 + tmuxセッション/ウィンドウ
+function fzf-worktree-widget() {
+  # gitリポジトリ内でなければ終了
+  if ! git rev-parse --is-inside-work-tree &>/dev/null; then
+    zle reset-prompt
+    return 1
+  fi
+
+  local selected worktree_path window_name session_name repo_root repo_name
+  # worktree一覧を表示
+  selected=$(git worktree list | fzf --query="$LBUFFER")
+
+  if [[ -n "$selected" ]]; then
+    # パスを取得（最初のカラム）
+    worktree_path=$(echo "$selected" | awk '{print $1}')
+    # ウィンドウ名はworktreeのディレクトリ名
+    window_name=$(basename "$worktree_path" | tr '.' '_')
+    # リポジトリのルートパスを取得（メインworktreeのパス）
+    repo_root=$(git worktree list | head -1 | awk '{print $1}')
+    # リポジトリ名をセッション名に
+    repo_name=$(basename "$repo_root" | tr '.' '_')
+    session_name="$repo_name"
+
+    if [[ -n "$TMUX" ]]; then
+      # tmux内の場合
+      if tmux has-session -t "$session_name" 2>/dev/null; then
+        # セッションが存在する場合、ウィンドウを確認
+        if tmux list-windows -t "$session_name" -F '#W' | grep -q "^${window_name}$"; then
+          # ウィンドウが存在すれば移動
+          tmux switch-client -t "$session_name"
+          tmux select-window -t "$session_name:$window_name"
+        else
+          # ウィンドウがなければ作成して移動
+          tmux new-window -t "$session_name" -n "$window_name" -c "$worktree_path"
+          tmux switch-client -t "$session_name"
+        fi
+      else
+        # セッションがなければ作成（ウィンドウ名も指定）
+        tmux new-session -d -s "$session_name" -n "$window_name" -c "$worktree_path"
+        tmux switch-client -t "$session_name"
+      fi
+    else
+      # tmux外の場合
+      if tmux has-session -t "$session_name" 2>/dev/null; then
+        if tmux list-windows -t "$session_name" -F '#W' | grep -q "^${window_name}$"; then
+          tmux attach-session -t "$session_name"
+          tmux select-window -t "$session_name:$window_name"
+        else
+          tmux new-window -t "$session_name" -n "$window_name" -c "$worktree_path"
+          tmux attach-session -t "$session_name"
+        fi
+      else
+        tmux new-session -s "$session_name" -n "$window_name" -c "$worktree_path"
+      fi
+    fi
+  fi
+  zle reset-prompt
+}
+zle -N fzf-worktree-widget
+bindkey '^w' fzf-worktree-widget
+
 # tmux auto-attach (loaded from functions directory)
 # To disable, add AUTO_TMUX=false to ~/.zsh/.zshrc_local
 autoload -Uz tmux-auto-attach
