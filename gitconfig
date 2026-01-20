@@ -1,0 +1,45 @@
+# This is Git's per-user configuration file.
+
+[include]
+  path = /Users/wakwak/delta/themes.gitconfig
+
+[core]
+  pager = deltaautocrlf
+  autocrlf = inputeditor
+  editor = nvim
+
+[user]
+  name = Ryo Sakaguchiemail
+  email = rsakaguchi3125@gmail.com
+
+[ghq]
+  root = /Users/wakwak/src
+
+[alias]
+  sw = switch
+  configg = config --global
+  swc = switch -c
+  brd = branch -D
+  browse = !gh browse
+  pr = !gh pr create
+  prb = !gh pr create -B
+  sync = !gh repo sync && gh poi
+  subm = submodule
+  poi = !gh poi
+  pr-checks = !gh pr checks
+  openpr = !gh pr view --web
+  wl = worktree list
+  wa = worktree add
+  wr = worktree remove
+  wp = worktree prune
+
+[delta]
+  features = collared-trogon
+  line-numbers = true
+
+[diff]
+  colorMoved = default
+
+[init]
+  defaultBranch = master
+
