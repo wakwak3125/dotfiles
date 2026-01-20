@@ -72,6 +72,9 @@ eval "$(sheldon source)"
 eval "$(~/.local/bin/mise activate zsh)"
 eval "$(direnv hook zsh)"
 
+# starship prompt
+eval "$(starship init zsh)"
+
 ## fzf widgets (replacing anyframe)
 # 履歴検索
 function fzf-history-widget() {

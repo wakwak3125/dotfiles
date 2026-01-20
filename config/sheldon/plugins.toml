@@ -21,13 +21,6 @@ github = 'zsh-users/zsh-syntax-highlighting'
 [plugins.zsh-history-substring-search]
 github = 'zsh-users/zsh-history-substring-search'
 
-[plugins.async]
-github = 'mafredri/zsh-async'
-
-[plugins.pure]
-github = 'sindresorhus/pure'
-use = ["async.zsh", "pure.zsh"]
-
 [plugins.zsh-completions]
 github = 'zsh-users/zsh-completions'
 

@@ -1,0 +1,86 @@
+# Starship configuration
+
+[directory]
+truncation_length = 100
+fish_style_pwd_dir_length = 1  # 各ディレクトリを1文字に短縮、最後だけフル表示
+
+[character]
+success_symbol = "[❯](purple)"
+error_symbol = "[❯](red)"
+
+[git_branch]
+format = "[$branch]($style) "
+style = "bright-black"
+
+[git_status]
+format = "[$all_status$ahead_behind]($style)"
+style = "bright-black"
+
+# 言語バージョン表示を無効化
+[buf]
+disabled = true
+[bun]
+disabled = true
+[c]
+disabled = true
+[cmake]
+disabled = true
+[crystal]
+disabled = true
+[dart]
+disabled = true
+[deno]
+disabled = true
+[dotnet]
+disabled = true
+[elixir]
+disabled = true
+[elm]
+disabled = true
+[erlang]
+disabled = true
+[golang]
+disabled = true
+[gradle]
+disabled = true
+[haskell]
+disabled = true
+[java]
+disabled = true
+[julia]
+disabled = true
+[kotlin]
+disabled = true
+[lua]
+disabled = true
+[nim]
+disabled = true
+[nodejs]
+disabled = true
+[ocaml]
+disabled = true
+[perl]
+disabled = true
+[php]
+disabled = true
+[python]
+disabled = true
+[rlang]
+disabled = true
+[ruby]
+disabled = true
+[rust]
+disabled = true
+[scala]
+disabled = true
+[swift]
+disabled = true
+[zig]
+disabled = true
+
+# クラウド認証情報を無効化
+[gcloud]
+disabled = true
+
+[aws]
+disabled = true

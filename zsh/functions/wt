@@ -48,15 +48,18 @@ case "$cmd" in
       return 1
     fi
 
+    # ディレクトリ名はブランチ名の最後の部分だけを使う (feature/login -> login)
+    local dir_name="${branch_name##*/}"
+
     # worktrees ディレクトリがなければ作成
     mkdir -p "$worktree_dir"
 
     if [[ "$create_branch" == true ]]; then
       # 新しいブランチを作成して worktree を追加
-      git worktree add -b "$branch_name" "$worktree_dir/$branch_name" "$base_branch"
+      git worktree add -b "$branch_name" "$worktree_dir/$dir_name" "$base_branch"
     else
       # 既存のブランチで worktree を追加
-      git worktree add "$worktree_dir/$branch_name" "$branch_name"
+      git worktree add "$worktree_dir/$dir_name" "$branch_name"
     fi
     ;;
 
@@ -84,7 +87,9 @@ case "$cmd" in
       return 1
     fi
 
-    local worktree_path="$worktree_dir/$branch_name"
+    # ディレクトリ名はブランチ名の最後の部分だけを使う (feature/login -> login)
+    local dir_name="${branch_name##*/}"
+    local worktree_path="$worktree_dir/$dir_name"
 
     # worktree が存在するか確認
     if [[ ! -d "$worktree_path" ]]; then
