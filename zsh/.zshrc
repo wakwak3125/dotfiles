@@ -47,6 +47,26 @@ DIRSTACKSIZE=100
 alias ll='ls -lhaG --color=auto'
 alias g='git'
 
+# tmux全セッション削除
+function tmux-kill-all() {
+  if ! tmux list-sessions &>/dev/null; then
+    echo "No tmux sessions running."
+    return 0
+  fi
+
+  echo "Active tmux sessions:"
+  tmux list-sessions
+  echo ""
+  read -q "REPLY?Kill all tmux sessions? [y/N] "
+  echo ""
+  if [[ "$REPLY" =~ ^[Yy]$ ]]; then
+    tmux kill-server
+    echo "All tmux sessions killed."
+  else
+    echo "Cancelled."
+  fi
+}
+
 ## Env
 eval "$(sheldon source)"
 eval "$(~/.local/bin/mise activate zsh)"
