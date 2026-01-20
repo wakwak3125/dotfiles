@@ -25,7 +25,7 @@ error_symbol = "[❯](red)"
 # 
 [git_status]
 style = 'fg:blue'
-format = '[$conflicted$deleted$renamed$modified$staged$untracked$ahead_behind]($style)'
+format = '[$conflicted$deleted$renamed$modified$staged$untracked$ahead_behind ]($style)'
 conflicted = '🏳'
 ahead = '🏎💨'
 behind = '😰'
