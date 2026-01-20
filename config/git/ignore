@@ -5,4 +5,5 @@ buildSrc/.kotlin
 
 **/.claude/settings.local.json
 
-.worktrees/**
+worktrees/
+worktrees/**

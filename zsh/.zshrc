@@ -123,31 +123,66 @@ bindkey '^g' fzf-ghq-widget
 
 # git worktree移動 + tmuxセッション/ウィンドウ
 function fzf-worktree-widget() {
-  # gitリポジトリ内でなければ終了
-  if ! git rev-parse --is-inside-work-tree &>/dev/null; then
-    zle reset-prompt
-    return 1
-  fi
-
   local selected worktree_path window_name session_name repo_root repo_name
+  local spinner='⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏'
+  local spin_idx=0
+  local tmpfile=$(mktemp)
+  local donefile=$(mktemp)
+  rm -f "$donefile"
+
+  # バックグラウンドで全ghqリポジトリからworktreeを収集
+  {
+    ghq list -p | while IFS= read -r repo; do
+      git -C "$repo" worktree list 2>/dev/null
+    done > "$tmpfile"
+    touch "$donefile"
+  } &!
+
+  # スピナーを表示しながら待機
+  while [[ ! -f "$donefile" ]]; do
+    zle -M "${spinner:$spin_idx:1} Scanning worktrees..."
+    zle -R
+    spin_idx=$(( (spin_idx + 1) % ${#spinner} ))
+    sleep 0.1
+  done
+  zle -M ""
+
+  local worktrees=$(<"$tmpfile")
+  rm -f "$tmpfile" "$donefile"
+
   # worktree一覧を表示
-  selected=$(git worktree list | fzf --query="$LBUFFER")
+  selected=$(echo "$worktrees" | fzf --query="$LBUFFER")
 
   if [[ -n "$selected" ]]; then
     # パスを取得（最初のカラム）
     worktree_path=$(echo "$selected" | awk '{print $1}')
     # ウィンドウ名はworktreeのディレクトリ名
     window_name=$(basename "$worktree_path" | tr '.' '_')
-    # リポジトリのルートパスを取得（メインworktreeのパス）
-    repo_root=$(git worktree list | head -1 | awk '{print $1}')
+    # リポジトリのルートパスを取得（選択したworktreeから取得）
+    repo_root=$(git -C "$worktree_path" worktree list | head -1 | awk '{print $1}')
     # リポジトリ名をセッション名に
     repo_name=$(basename "$repo_root" | tr '.' '_')
     session_name="$repo_name"
 
     if [[ -n "$TMUX" ]]; then
       # tmux内の場合
-      if tmux has-session -t "$session_name" 2>/dev/null; then
-        # セッションが存在する場合、ウィンドウを確認
+      local current_session current_window
+      current_session=$(tmux display-message -p '#S')
+      current_window=$(tmux display-message -p '#W')
+      if [[ "$current_session" == "$session_name" ]]; then
+        # すでに対象セッションにいる場合
+        if [[ "$current_window" == "$window_name" ]]; then
+          # すでにそのウィンドウにいる場合はcdを実行
+          cd "$worktree_path"
+        elif tmux list-windows -t "$session_name" -F '#W' | grep -q "^${window_name}$"; then
+          # ウィンドウが存在すれば移動
+          tmux select-window -t "$session_name:$window_name"
+        else
+          # ウィンドウがなければ作成（-tなしで現在のセッションに作成）
+          tmux new-window -n "$window_name" -c "$worktree_path"
+        fi
+      elif tmux has-session -t "$session_name" 2>/dev/null; then
+        # 別のセッションにいて、対象セッションが存在する場合
         if tmux list-windows -t "$session_name" -F '#W' | grep -q "^${window_name}$"; then
           # ウィンドウが存在すれば移動
           tmux switch-client -t "$session_name"
