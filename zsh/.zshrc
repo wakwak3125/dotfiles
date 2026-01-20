@@ -76,7 +76,12 @@ function fzf-ghq-widget() {
 
     if [[ -n "$TMUX" ]]; then
       # tmux内の場合
-      if tmux has-session -t "$session_name" 2>/dev/null; then
+      local current_session
+      current_session=$(tmux display-message -p '#S')
+      if [[ "$current_session" == "$session_name" ]]; then
+        # すでにそのセッションにいる場合はcdを実行
+        cd "$selected"
+      elif tmux has-session -t "$session_name" 2>/dev/null; then
         tmux switch-client -t "$session_name"
       else
         tmux new-session -d -s "$session_name" -c "$selected"
