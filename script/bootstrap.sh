@@ -31,6 +31,15 @@ fi
 
 ln -sfv $ROOT/config/sheldon/plugins.toml $HOME/.config/sheldon/plugins.toml
 
+if [ ! -d ~/.config/mise ]; then
+  mkdir -p ~/.config/mise
+  echo '~/.config/mise was created'
+fi
+
+ln -sfv $ROOT/config/mise/config.toml $HOME/.config/mise/config.toml
+
+ln -sfv $ROOT/config/starship.toml $HOME/.config/starship.toml
+
 if [ ! -d ~/.config/git ]; then
   mkdir -p ~/.config/git
   echo '~/.config/git was created'

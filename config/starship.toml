@@ -1,20 +1,42 @@
 # Starship configuration
 
+# 表示するものを明示的に指定
+format = """
+$directory\
+$git_branch\
+$status\
+$git_status\
+$cmd_duration\
+$line_break\
+$character"""
+
 [directory]
-truncation_length = 100
+truncation_length = 3
 fish_style_pwd_dir_length = 1  # 各ディレクトリを1文字に短縮、最後だけフル表示
+truncate_to_repo = true
 
 [character]
 success_symbol = "[❯](purple)"
 error_symbol = "[❯](red)"
-
-[git_branch]
-format = "[$branch]($style) "
-style = "bright-black"
-
+# 
+# [git_branch]
+# format = "[$branch]($style) "
+# style = "bright-black"
+# 
 [git_status]
-format = "[$all_status$ahead_behind]($style)"
-style = "bright-black"
+style = 'fg:blue'
+format = '[$conflicted$deleted$renamed$modified$staged$untracked$ahead_behind]($style)'
+conflicted = '🏳'
+ahead = '🏎💨'
+behind = '😰'
+diverged = '😵'
+up_to_date = '✓'
+untracked = '?'
+stashed = '📦'
+modified = '*'
+staged = '[++\($count\)](green)'
+renamed = '👅'
+deleted = '🗑'
 
 # 言語バージョン表示を無効化
 [buf]
@@ -83,4 +105,8 @@ disabled = true
 disabled = true
 
 [aws]
+disabled = true
+
+# パッケージバージョンを無効化
+[package]
 disabled = true
