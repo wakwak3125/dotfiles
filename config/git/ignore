@@ -2,6 +2,7 @@
 .idea/csv-editor.xml
 buildSrc/.kotlin
 .idea/AndroidProjectSystem.xml
+.idea/vcs.xml
 
 **/.claude/settings.local.json
 
