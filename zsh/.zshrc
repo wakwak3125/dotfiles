@@ -127,31 +127,40 @@ bindkey '^g' fzf-ghq-widget
 # git worktree移動 + tmuxセッション/ウィンドウ
 function fzf-worktree-widget() {
   local selected worktree_path window_name session_name repo_root repo_name
-  local spinner='⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏'
-  local spin_idx=0
-  local tmpfile=$(mktemp)
-  local donefile=$(mktemp)
-  rm -f "$donefile"
+  local worktrees
 
-  # バックグラウンドで全ghqリポジトリからworktreeを収集
-  {
-    ghq list -p | while IFS= read -r repo; do
-      git -C "$repo" worktree list 2>/dev/null
-    done > "$tmpfile"
-    touch "$donefile"
-  } &!
+  # 現在のディレクトリがgit管理下かどうかをチェック
+  if git rev-parse --is-inside-work-tree &>/dev/null; then
+    # git管理下の場合は現在のリポジトリのworktreeのみ取得
+    worktrees=$(git worktree list 2>/dev/null)
+  else
+    # git管理下でない場合は全ghqリポジトリからworktreeを収集
+    local spinner='⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏'
+    local spin_idx=0
+    local tmpfile=$(mktemp)
+    local donefile=$(mktemp)
+    rm -f "$donefile"
 
-  # スピナーを表示しながら待機
-  while [[ ! -f "$donefile" ]]; do
-    zle -M "${spinner:$spin_idx:1} Scanning worktrees..."
-    zle -R
-    spin_idx=$(( (spin_idx + 1) % ${#spinner} ))
-    sleep 0.1
-  done
-  zle -M ""
+    # バックグラウンドで全ghqリポジトリからworktreeを収集
+    {
+      ghq list -p | while IFS= read -r repo; do
+        git -C "$repo" worktree list 2>/dev/null
+      done > "$tmpfile"
+      touch "$donefile"
+    } &!
 
-  local worktrees=$(<"$tmpfile")
-  rm -f "$tmpfile" "$donefile"
+    # スピナーを表示しながら待機
+    while [[ ! -f "$donefile" ]]; do
+      zle -M "${spinner:$spin_idx:1} Scanning worktrees..."
+      zle -R
+      spin_idx=$(( (spin_idx + 1) % ${#spinner} ))
+      sleep 0.1
+    done
+    zle -M ""
+
+    worktrees=$(<"$tmpfile")
+    rm -f "$tmpfile" "$donefile"
+  fi
 
   # worktree一覧を表示
   selected=$(echo "$worktrees" | fzf --query="$LBUFFER")
