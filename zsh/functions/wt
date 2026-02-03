@@ -1,17 +1,19 @@
-# git worktree helper command
-# Usage:
-#   wt add <branch>            - Create worktree for existing branch
-#   wt add -b <branch> [base]  - Create worktree with new branch
-#   wt rm <branch>             - Remove worktree only
-#   wt rm -b <branch>          - Remove worktree and branch
-#   wt list                    - List all worktrees
+# git worktree ヘルパーコマンド
+# 使い方:
+#   wt add <branch>            - 既存ブランチの worktree を作成
+#   wt add -b <branch>         - 新しいブランチを作成して worktree を追加
+#   wt rm <branch>             - worktree を削除
+#   wt rm -b <branch>          - worktree とブランチを削除
+#   wt list                    - worktree 一覧を表示
+#   wt prune                   - リモート同期 + worktree の整理
+#   wt clean                   - リモート同期 + マージ済みブランチ削除 + worktree の整理
 
 local cmd=$1
 shift
 
-# gitリポジトリ内でなければ終了
+# git リポジトリ内でなければ終了
 if ! git rev-parse --is-inside-work-tree &>/dev/null; then
-  echo "Error: Not a git repository" >&2
+  echo "エラー: git リポジトリではありません" >&2
   return 1
 fi
 
@@ -22,7 +24,6 @@ case "$cmd" in
   add)
     local create_branch=false
     local branch_name=""
-    local base_branch="HEAD"
 
     # オプション解析
     while [[ $# -gt 0 ]]; do
@@ -32,19 +33,15 @@ case "$cmd" in
           shift
           ;;
         *)
-          if [[ -z "$branch_name" ]]; then
-            branch_name=$1
-          else
-            base_branch=$1
-          fi
+          branch_name=$1
           shift
           ;;
       esac
     done
 
     if [[ -z "$branch_name" ]]; then
-      echo "Usage: wt add [-b] <branch_name> [base_branch]" >&2
-      echo "  -b, --branch  Create a new branch" >&2
+      echo "使い方: wt add [-b] <branch>" >&2
+      echo "  -b, --branch  新しいブランチを作成" >&2
       return 1
     fi
 
@@ -56,7 +53,7 @@ case "$cmd" in
 
     if [[ "$create_branch" == true ]]; then
       # 新しいブランチを作成して worktree を追加
-      git worktree add -b "$branch_name" "$worktree_dir/$dir_name" "$base_branch"
+      git worktree add -b "$branch_name" "$worktree_dir/$dir_name"
     else
       # 既存のブランチで worktree を追加
       git worktree add "$worktree_dir/$dir_name" "$branch_name"
@@ -82,8 +79,8 @@ case "$cmd" in
     done
 
     if [[ -z "$branch_name" ]]; then
-      echo "Usage: wt rm [-b] <branch_name>" >&2
-      echo "  -b, --branch  Also delete the branch" >&2
+      echo "使い方: wt rm [-b] <branch>" >&2
+      echo "  -b, --branch  ブランチも削除" >&2
       return 1
     fi
 
@@ -93,7 +90,7 @@ case "$cmd" in
 
     # worktree が存在するか確認
     if [[ ! -d "$worktree_path" ]]; then
-      echo "Error: Worktree '$worktree_path' not found" >&2
+      echo "エラー: worktree '$worktree_path' が見つかりません" >&2
       return 1
     fi
 
@@ -103,7 +100,7 @@ case "$cmd" in
     # -b オプションが指定された場合はブランチも削除
     if [[ "$delete_branch" == true ]]; then
       git branch -d "$branch_name" 2>/dev/null || git branch -D "$branch_name"
-      echo "Deleted branch '$branch_name'"
+      echo "ブランチ '$branch_name' を削除しました"
     fi
     ;;
 
@@ -111,14 +108,50 @@ case "$cmd" in
     git worktree list
     ;;
 
+  prune)
+    # リモートと同期
+    echo "リモートを同期中..."
+    git fetch --prune
+
+    # worktree の整理
+    echo "worktree を整理中..."
+    git worktree prune
+    echo "完了"
+    ;;
+
+  clean)
+    # リモートと同期
+    echo "リモートを同期中..."
+    git fetch --prune
+
+    # マージ済みブランチを削除
+    local merged_branches=$(git branch --merged | grep -v -E "^\*|^\s*(main|master|develop)$" | sed 's/^[ ]*//')
+
+    if [[ -n "$merged_branches" ]]; then
+      echo "マージ済みブランチを削除中..."
+      echo "$merged_branches" | while read -r branch; do
+        git branch -d "$branch" 2>/dev/null && echo "  削除: $branch"
+      done
+    else
+      echo "削除対象のブランチはありません"
+    fi
+
+    # worktree の整理
+    echo "worktree を整理中..."
+    git worktree prune
+    echo "完了"
+    ;;
+
   *)
-    echo "Usage: wt <command> [args]"
+    echo "使い方: wt <command> [args]"
     echo ""
-    echo "Commands:"
-    echo "  add <branch>            Create worktree for existing branch"
-    echo "  add -b <branch> [base]  Create worktree with new branch"
-    echo "  rm <branch>             Remove worktree only"
-    echo "  rm -b <branch>          Remove worktree and branch"
-    echo "  list                    List all worktrees"
+    echo "コマンド:"
+    echo "  add <branch>            既存ブランチの worktree を作成"
+    echo "  add -b <branch>         新しいブランチを作成して worktree を追加"
+    echo "  rm <branch>             worktree を削除"
+    echo "  rm -b <branch>          worktree とブランチを削除"
+    echo "  list                    worktree 一覧を表示"
+    echo "  prune                   リモート同期 + worktree の整理"
+    echo "  clean                   リモート同期 + マージ済みブランチ削除 + worktree の整理"
     ;;
 esac
