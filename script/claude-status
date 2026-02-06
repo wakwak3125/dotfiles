@@ -1,0 +1,382 @@
+#!/usr/bin/env bash
+# claude-status: Claude Code セッションステータスダッシュボード
+#
+# 使い方:
+#   claude-status update      - stdin から JSON を読みステータスを更新（Claude Code hooks 用）
+#   claude-status idle        - ステータスを待機中に設定（PostToolUse hooks 用）
+#   claude-status clear       - ステータスを削除
+#   claude-status dashboard   - インタラクティブダッシュボードを表示
+#   claude-status cleanup     - 古いエントリを削除
+
+STATUS_DIR="/tmp/claude-status"
+STALE_THRESHOLD=300  # 5分で stale 扱い
+
+mkdir -p "$STATUS_DIR"
+
+# tmux pane が存在するか確認
+is_pane_alive() {
+  local pane="$1"
+  [[ -z "$pane" ]] && return 1
+  tmux list-panes -a -F '#{pane_id}' 2>/dev/null | grep -qF "$pane"
+}
+
+# jq チェック
+if ! command -v jq &>/dev/null; then
+  echo "エラー: jq が必要です (brew install jq)" >&2
+  exit 1
+fi
+
+# セッション識別子（tmux pane ID or PID）
+get_session_id() {
+  if [[ -n "${TMUX_PANE:-}" ]]; then
+    # %42 → 42
+    echo "${TMUX_PANE//%/}"
+  else
+    # tmux 外の場合は親プロセスの PID を使用
+    echo "pid_${PPID}"
+  fi
+}
+
+# ──────────────────────────────────────────────────────
+# update: PreToolUse hook から呼ばれる
+# stdin に {"tool_name": "...", "tool_input": {...}} が渡される
+# ──────────────────────────────────────────────────────
+cmd_update() {
+  local input
+  input=$(cat)
+
+  local session_id
+  session_id=$(get_session_id)
+
+  local tool_name detail repo branch tmux_session tmux_window
+
+  tool_name=$(echo "$input" | jq -r '.tool_name // empty' 2>/dev/null)
+
+  # ツールごとに概要を抽出
+  case "$tool_name" in
+    Bash)
+      detail=$(echo "$input" | jq -r '.tool_input.command // empty' 2>/dev/null | head -1 | cut -c1-50)
+      ;;
+    Read|Write)
+      detail=$(echo "$input" | jq -r '.tool_input.file_path // empty' 2>/dev/null | sed "s|$HOME|~|")
+      ;;
+    Edit)
+      detail=$(echo "$input" | jq -r '.tool_input.file_path // empty' 2>/dev/null | sed "s|$HOME|~|")
+      ;;
+    Grep)
+      detail=$(echo "$input" | jq -r '.tool_input.pattern // empty' 2>/dev/null | cut -c1-30)
+      ;;
+    Glob)
+      detail=$(echo "$input" | jq -r '.tool_input.pattern // empty' 2>/dev/null)
+      ;;
+    Task)
+      detail=$(echo "$input" | jq -r '.tool_input.description // empty' 2>/dev/null | cut -c1-30)
+      ;;
+    *)
+      detail=""
+      ;;
+  esac
+
+  # Git 情報（キャッシュで高速化）
+  if [[ -z "${_CS_REPO:-}" ]]; then
+    export _CS_REPO=$(basename "$(git rev-parse --show-toplevel 2>/dev/null)" 2>/dev/null || echo "?")
+    export _CS_BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "?")
+  fi
+  repo="${_CS_REPO}"
+  branch="${_CS_BRANCH}"
+
+  # tmux 情報（キャッシュで高速化）
+  if [[ -n "${TMUX:-}" ]]; then
+    if [[ -z "${_CS_TMUX_SESSION:-}" ]]; then
+      export _CS_TMUX_SESSION=$(tmux display-message -p '#S' 2>/dev/null || echo "")
+      export _CS_TMUX_WINDOW=$(tmux display-message -p '#W' 2>/dev/null || echo "")
+    fi
+    tmux_session="${_CS_TMUX_SESSION}"
+    tmux_window="${_CS_TMUX_WINDOW}"
+  else
+    tmux_session=""
+    tmux_window=""
+  fi
+
+  # ステータスファイルに書き込み
+  jq -n \
+    --arg repo "$repo" \
+    --arg branch "$branch" \
+    --arg tool "$tool_name" \
+    --arg detail "$detail" \
+    --arg session "$tmux_session" \
+    --arg window "$tmux_window" \
+    --arg pane "${TMUX_PANE:-}" \
+    --argjson ts "$(date +%s)" \
+    '{repo:$repo, branch:$branch, tool:$tool, detail:$detail, session:$session, window:$window, pane:$pane, ts:$ts}' \
+    > "$STATUS_DIR/${session_id}.json"
+}
+
+# ──────────────────────────────────────────────────────
+# idle: PostToolUse hook から呼ばれる
+# ──────────────────────────────────────────────────────
+cmd_idle() {
+  cat > /dev/null 2>/dev/null  # stdin を消費
+
+  local session_id
+  session_id=$(get_session_id)
+  local status_file="$STATUS_DIR/${session_id}.json"
+
+  if [[ -f "$status_file" ]]; then
+    local tmp
+    tmp=$(mktemp)
+    jq --argjson ts "$(date +%s)" \
+      '.tool = "idle" | .detail = "" | .ts = $ts' \
+      "$status_file" > "$tmp" && mv "$tmp" "$status_file"
+  fi
+}
+
+# ──────────────────────────────────────────────────────
+# clear: セッション終了時に呼ばれる
+# ──────────────────────────────────────────────────────
+cmd_clear() {
+  cat > /dev/null 2>/dev/null  # stdin を消費
+
+  local session_id
+  session_id=$(get_session_id)
+  rm -f "$STATUS_DIR/${session_id}.json"
+}
+
+# 表示幅を計算（全角文字対応、bash 3.2 でも正確に動作）
+display_width() {
+  [[ -z "$1" ]] && echo 0 && return
+  printf '%s' "$1" | perl -CSD -ne '
+    my $w = 0;
+    for (split //) {
+      my $cp = ord;
+      $w += ($cp >= 0x1100 && $cp <= 0x115F ||
+             $cp >= 0x2E80 && $cp <= 0x9FFF ||
+             $cp >= 0xAC00 && $cp <= 0xD7A3 ||
+             $cp >= 0xF900 && $cp <= 0xFAFF ||
+             $cp >= 0xFE30 && $cp <= 0xFE6F ||
+             $cp >= 0xFF01 && $cp <= 0xFF60 ||
+             $cp >= 0xFFE0 && $cp <= 0xFFE6) ? 2 : 1;
+    }
+    print $w;
+  '
+}
+
+# 表示幅を考慮した右パディング（全角文字対応）
+padr() {
+  local str="$1" target="$2"
+  printf '%s' "$str"
+  if [[ -z "$str" ]]; then
+    printf '%*s' "$target" ''
+    return
+  fi
+  local dw
+  dw=$(display_width "$str")
+  local pad=$((target - dw))
+  (( pad > 0 )) && printf '%*s' "$pad" ''
+}
+
+# ──────────────────────────────────────────────────────
+# dashboard: インタラクティブダッシュボード
+# ──────────────────────────────────────────────────────
+cmd_dashboard() {
+  local BOLD='\033[1m'
+  local DIM='\033[2m'
+  local GREEN='\033[32m'
+  local BLUE='\033[34m'
+  local CYAN='\033[36m'
+  local MAGENTA='\033[35m'
+  local RESET='\033[0m'
+
+  # カーソル非表示、画面クリアは初回のみ
+  tput civis 2>/dev/null
+  trap 'tput cnorm 2>/dev/null; tput ed 2>/dev/null; exit 0' EXIT INT TERM
+  clear
+
+  while true; do
+    # カーソルを左上に移動（画面消去せず上書き）
+    tput home
+
+    # ターミナル幅を取得して動的にレイアウト
+    # ※ tput cols は $() 内で stdout がパイプになり TIOCGWINSZ が失敗するため
+    #   stty size </dev/tty を使用
+    local cols
+    cols=$(stty size </dev/tty 2>/dev/null | awk '{print $2}')
+    [[ -z "$cols" || "$cols" -le 0 ]] 2>/dev/null && cols=$(tput cols 2>/dev/null)
+    [[ -z "$cols" || "$cols" -le 0 ]] 2>/dev/null && cols=80
+    local pad_lr=2  # 左右パディング
+    local pad_str
+    pad_str=$(printf '%*s' "$pad_lr" '')
+    local inner=$((cols - pad_lr * 2))
+    local separator
+    separator=$(printf '%*s' "$inner" '' | tr ' ' '─')
+
+    # SESSION(32) + BRANCH(24) + STATUS(8) + AGE(4) + スペース(4) = 72
+    # DETAIL が残り全部を使う
+    local w_session=32
+    local w_branch=24
+    local w_status=8
+    local w_age=4
+    local w_detail=$((inner - w_session - w_branch - w_status - w_age - 4))
+
+    local now
+    now=$(date +%s)
+    local buf=""
+
+    buf+=$'\n'
+    buf+="${pad_str}${BOLD}${CYAN}Claude Code ダッシュボード${RESET}"
+    # q: 閉じる を右寄せ
+    local title_len=26  # "Claude Code ダッシュボード" の表示幅
+    local pad=$((inner - title_len - 11))  # 11 = "ESC: 閉じる" の表示幅 (ESC: =5, 閉じる=6)
+    (( pad < 1 )) && pad=1
+    buf+="$(printf '%*s' "$pad" '')${DIM}ESC: 閉じる${RESET}"$'\n'
+    buf+="${pad_str}${DIM}${separator}${RESET}"$'\n'
+
+    # ステータスファイルを収集
+    local has_sessions=false
+    local entries=()
+
+    for f in "$STATUS_DIR"/*.json; do
+      [[ -f "$f" ]] || continue
+
+      local ts pane_id
+      ts=$(jq -r '.ts' "$f" 2>/dev/null)
+      [[ -z "$ts" || "$ts" == "null" ]] && { rm -f "$f"; continue; }
+
+      # tmux pane が消えていたらステータスファイルも削除
+      pane_id=$(jq -r '.pane // ""' "$f" 2>/dev/null)
+      if [[ -n "$pane_id" ]] && ! is_pane_alive "$pane_id"; then
+        rm -f "$f"
+        continue
+      fi
+
+      local age=$((now - ts))
+      (( age > STALE_THRESHOLD )) && continue
+
+      has_sessions=true
+      entries+=("$f")
+    done
+
+    if [[ "$has_sessions" == true ]]; then
+      buf+="${pad_str}${BOLD}$(padr "SESSION" $w_session) $(padr "BRANCH" $w_branch) $(padr "STATUS" $w_status) $(padr "DETAIL" $w_detail) $(printf '%*s' $w_age "AGE")${RESET}"$'\n'
+      buf+="${pad_str}${DIM}${separator}${RESET}"$'\n'
+
+      for f in "${entries[@]}"; do
+        local repo branch tool detail ts session window
+        repo=$(jq -r '.repo' "$f" 2>/dev/null)
+        branch=$(jq -r '.branch' "$f" 2>/dev/null)
+        tool=$(jq -r '.tool' "$f" 2>/dev/null)
+        detail=$(jq -r '.detail // ""' "$f" 2>/dev/null)
+        ts=$(jq -r '.ts' "$f" 2>/dev/null)
+        session=$(jq -r '.session // ""' "$f" 2>/dev/null)
+        window=$(jq -r '.window // ""' "$f" 2>/dev/null)
+
+        # 経過時間
+        local age=$((now - ts))
+        local age_str
+        if (( age < 60 )); then
+          age_str="${age}s"
+        else
+          age_str="$((age / 60))m"
+        fi
+
+        # セッション/ウィンドウラベル
+        local label
+        if [[ -n "$session" && -n "$window" ]]; then
+          label="${session}/${window}"
+        elif [[ -n "$repo" ]]; then
+          label="$repo"
+        else
+          label="?"
+        fi
+        [[ ${#label} -gt $w_session ]] && label="${label:0:$((w_session - 1))}…"
+
+        # ブランチ名短縮
+        branch="${branch##*/}"
+        [[ ${#branch} -gt $w_branch ]] && branch="${branch:0:$((w_branch - 1))}…"
+
+        # 詳細短縮
+        [[ ${#detail} -gt $w_detail ]] && detail="${detail:0:$((w_detail - 1))}…"
+
+        # ステータス表示
+        local status_str status_color
+        if [[ "$tool" == "idle" || -z "$tool" ]]; then
+          status_str="待機"
+          status_color="$DIM"
+        else
+          status_str="$tool"
+          status_color="$GREEN"
+        fi
+        [[ ${#status_str} -gt $w_status ]] && status_str="${status_str:0:$((w_status - 1))}…"
+
+        buf+="${pad_str}${BLUE}$(padr "$label" $w_session)${RESET} ${MAGENTA}$(padr "$branch" $w_branch)${RESET} ${status_color}$(padr "$status_str" $w_status)${RESET} ${DIM}$(padr "$detail" $w_detail)${RESET} $(printf '%*s' $w_age "$age_str")"$'\n'
+      done
+    else
+      buf+=$'\n'
+      buf+="${pad_str}${DIM}アクティブな Claude Code セッションはありません${RESET}"$'\n'
+      buf+=$'\n'
+    fi
+
+    buf+="${pad_str}${DIM}${separator}${RESET}"$'\n'
+    buf+="${pad_str}${DIM}更新間隔: 1s | セッション数: ${#entries[@]}${RESET}"$'\n'
+
+    # バッファを一括描画 + 残余行を消去
+    echo -ne "$buf"
+    tput ed
+
+    # 1秒待機（q で終了）
+    read -t 1 -n 1 -s key 2>/dev/null && [[ "$key" == $'\e' ]] && break
+  done
+}
+
+# ──────────────────────────────────────────────────────
+# cleanup: 古いエントリを削除
+# ──────────────────────────────────────────────────────
+cmd_cleanup() {
+  local now
+  now=$(date +%s)
+  local count=0
+
+  for f in "$STATUS_DIR"/*.json; do
+    [[ -f "$f" ]] || continue
+    local ts pane_id
+    ts=$(jq -r '.ts' "$f" 2>/dev/null)
+    [[ -z "$ts" || "$ts" == "null" ]] && { rm -f "$f"; ((count++)); continue; }
+
+    # tmux pane が消えていたら削除
+    pane_id=$(jq -r '.pane // ""' "$f" 2>/dev/null)
+    if [[ -n "$pane_id" ]] && ! is_pane_alive "$pane_id"; then
+      rm -f "$f"
+      ((count++))
+      continue
+    fi
+
+    local age=$((now - ts))
+    if (( age > STALE_THRESHOLD )); then
+      rm -f "$f"
+      ((count++))
+    fi
+  done
+
+  echo "${count} 件のエントリを削除しました"
+}
+
+# ──────────────────────────────────────────────────────
+# メインディスパッチ
+# ──────────────────────────────────────────────────────
+case "${1:-}" in
+  update)    cmd_update ;;
+  idle)      cmd_idle ;;
+  clear)     cmd_clear ;;
+  dashboard) cmd_dashboard ;;
+  cleanup)   cmd_cleanup ;;
+  *)
+    echo "使い方: claude-status <command>"
+    echo ""
+    echo "コマンド:"
+    echo "  update      ステータスを更新（PreToolUse hook 用）"
+    echo "  idle        ステータスを待機中に（PostToolUse hook 用）"
+    echo "  clear       ステータスを削除"
+    echo "  dashboard   インタラクティブダッシュボード"
+    echo "  cleanup     古いエントリを削除"
+    ;;
+esac

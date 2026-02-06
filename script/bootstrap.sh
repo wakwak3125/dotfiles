@@ -15,7 +15,12 @@ if [ ! -d ~/.config/tmux ]; then
   echo '~/.config/tmux was created'
 fi
 
-ln -sfv $ROOT/config/tmux/tmux.conf $HOME/.tmux.conf
+ln -sfv $ROOT/config/tmux/tmux.conf $HOME/.config/tmux/tmux.conf
+
+# claude-status コマンドをパスに追加
+mkdir -p $HOME/.local/bin
+ln -sfv $ROOT/script/claude-status $HOME/.local/bin/claude-status
+ln -sfv $ROOT/script/tmux-switcher $HOME/.local/bin/tmux-switcher
 
 if [ ! -d ~/.config/alacritty ]; then
   mkdir -p ~/.config/alacritty

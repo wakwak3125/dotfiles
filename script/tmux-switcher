@@ -1,0 +1,100 @@
+#!/usr/bin/env bash
+# tmux-switcher: fzf を使ったコマンドパレット風ウィンドウスイッチャー
+#
+# tmux popup から呼び出す想定:
+#   bind <key> display-popup -E -w 70% -h 50% "tmux-switcher"
+
+set -euo pipefail
+
+# カラム幅
+W_TARGET=16
+W_WINDOW=16
+W_PATH=32
+
+# パスを短縮 (収まらなければ ~/…/parent/base 形式)
+shorten_path() {
+  local p="${1/$HOME/\~}" max="$2"
+  if [[ ${#p} -le $max ]]; then
+    printf '%s' "$p"
+    return
+  fi
+  local short="~/…/$(basename "$(dirname "$p")")/$(basename "$p")"
+  if [[ ${#short} -gt $max ]]; then
+    short="~/…/$(basename "$p")"
+  fi
+  printf '%s' "${short:0:$max}"
+}
+
+# 文字列を最大幅に切り詰め
+truncate() {
+  local s="$1" max="$2"
+  if [[ ${#s} -gt $max ]]; then
+    printf '%s' "${s:0:$((max-1))}…"
+  else
+    printf '%s' "$s"
+  fi
+}
+
+current=$(tmux display-message -p '#S:#I' 2>/dev/null || echo "")
+
+SEP=$'\t'
+list=$(tmux list-windows -a \
+  -F "#S${SEP}#I${SEP}#{window_name}${SEP}#{pane_current_path}" \
+  2>/dev/null)
+
+if [[ -z "$list" ]]; then
+  echo "ウィンドウがありません"
+  exit 0
+fi
+
+# ヘッダー
+header=$(printf "  %-${W_TARGET}s${SEP}%-${W_WINDOW}s${SEP}%s" \
+  "TARGET" "WINDOW" "PATH")
+
+# 行を整形: TAB 区切りで [marker+target]\t[window]\t[path]
+# --nth=1,2 で検索を TARGET / WINDOW に限定するため全カラム TAB 区切り
+formatted=""
+while IFS=$'\t' read -r session idx wname wpath; do
+  target="${session}:${idx}"
+  marker=" "
+  [[ "$target" == "$current" ]] && marker="*"
+
+  t=$(truncate "$target" $W_TARGET)
+  w=$(truncate "$wname" $W_WINDOW)
+  p=$(shorten_path "$wpath" $W_PATH)
+
+  formatted+=$(printf "%s %-${W_TARGET}s${SEP}%-${W_WINDOW}s${SEP}%s" \
+    "$marker" "$t" "$w" "$p")
+  formatted+=$'\n'
+done <<< "$list"
+
+# プレビュー: 選択行から target を抽出し capture-pane で中身を表示
+preview_cmd='
+  target=$(echo {} | cut -f1 | sed "s/^[* ]*//" | awk "{print \$1}")
+  tmux capture-pane -t "$target" -p 2>/dev/null || echo "(プレビューなし)"
+'
+
+# fzf (--nth=1,2 で検索範囲を target/window に限定)
+selected=$(printf '%s' "$formatted" | fzf \
+  --delimiter=$'\t' \
+  --nth=1,2 \
+  --reverse \
+  --border=rounded \
+  --border-label=" Switch Window " \
+  --header="$header" \
+  --header-first \
+  --no-sort \
+  --prompt="  " \
+  --pointer="▶" \
+  --bind="ctrl-k:kill-line" \
+  --color="border:cyan,label:cyan,header:dim" \
+  --preview="$preview_cmd" \
+  --preview-window="down,60%,border-top" \
+) || exit 0
+
+# 第1カラム (marker + target) から session:index を抽出
+target=$(printf '%s' "$selected" | cut -f1 | sed 's/^[* ]*//' | awk '{print $1}')
+
+if [[ -n "$target" ]]; then
+  tmux switch-client -t "$target"
+fi
