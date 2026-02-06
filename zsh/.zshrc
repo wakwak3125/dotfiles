@@ -21,6 +21,23 @@ export PATH=$PATH:$HOME/.cargo/bin
 
 bindkey -e
 autoload -Uz add-zsh-hook
+
+# tmux window名をgitブランチ名に自動更新
+function _tmux_update_window_name() {
+  [[ -n "$TMUX" ]] || return
+  local branch
+  branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null)
+  if [[ -n "$branch" ]]; then
+    if [[ "$branch" == "HEAD" ]]; then
+      branch=$(git rev-parse --short HEAD 2>/dev/null)
+    fi
+    tmux rename-window "${branch##*/}"
+  else
+    tmux rename-window "${PWD##*/}"
+  fi
+}
+add-zsh-hook precmd _tmux_update_window_name
+
 #setopt auto_cd
 setopt extended_glob
 setopt correct
@@ -168,8 +185,10 @@ function fzf-worktree-widget() {
   if [[ -n "$selected" ]]; then
     # パスを取得（最初のカラム）
     worktree_path=$(echo "$selected" | awk '{print $1}')
-    # ウィンドウ名はworktreeのディレクトリ名
-    window_name=$(basename "$worktree_path" | tr '.' '_')
+    # ウィンドウ名はworktreeのブランチ名（precmdフックと統一）
+    window_name=$(git -C "$worktree_path" rev-parse --abbrev-ref HEAD 2>/dev/null)
+    window_name="${window_name##*/}"
+    [[ -z "$window_name" ]] && window_name=$(basename "$worktree_path" | tr '.' '_')
     # リポジトリのルートパスを取得（選択したworktreeから取得）
     repo_root=$(git -C "$worktree_path" worktree list | head -1 | awk '{print $1}')
     # リポジトリ名をセッション名に
