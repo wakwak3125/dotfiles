@@ -205,7 +205,7 @@ function fzf-worktree-widget() {
         if [[ "$current_window" == "$window_name" ]]; then
           # すでにそのウィンドウにいる場合はcdを実行
           cd "$worktree_path"
-        elif tmux list-windows -t "$session_name" -F '#W' | grep -q "^${window_name}$"; then
+        elif tmux list-windows -t "$session_name" -F '#W' | grep -qxF "${window_name}"; then
           # ウィンドウが存在すれば移動
           tmux select-window -t "$session_name:$window_name"
         else
@@ -214,7 +214,7 @@ function fzf-worktree-widget() {
         fi
       elif tmux has-session -t "$session_name" 2>/dev/null; then
         # 別のセッションにいて、対象セッションが存在する場合
-        if tmux list-windows -t "$session_name" -F '#W' | grep -q "^${window_name}$"; then
+        if tmux list-windows -t "$session_name" -F '#W' | grep -qxF "${window_name}"; then
           # ウィンドウが存在すれば移動
           tmux switch-client -t "$session_name"
           tmux select-window -t "$session_name:$window_name"
@@ -231,9 +231,9 @@ function fzf-worktree-widget() {
     else
       # tmux外の場合
       if tmux has-session -t "$session_name" 2>/dev/null; then
-        if tmux list-windows -t "$session_name" -F '#W' | grep -q "^${window_name}$"; then
-          tmux attach-session -t "$session_name"
+        if tmux list-windows -t "$session_name" -F '#W' | grep -qxF "${window_name}"; then
           tmux select-window -t "$session_name:$window_name"
+          tmux attach-session -t "$session_name"
         else
           tmux new-window -t "$session_name" -n "$window_name" -c "$worktree_path"
           tmux attach-session -t "$session_name"

@@ -51,8 +51,8 @@ fi
 header=$(printf "  %-${W_TARGET}s${SEP}%-${W_WINDOW}s${SEP}%s" \
   "TARGET" "WINDOW" "PATH")
 
-# 行を整形: TAB 区切りで [marker+target]\t[window]\t[path]
-# --nth=1,2 で検索を TARGET / WINDOW に限定するため全カラム TAB 区切り
+# 行を整形: TAB 区切りで [raw_target]\t[marker+target]\t[window]\t[path]
+# raw_target は --with-nth=2.. で非表示にし、検索・プレビュー・選択で使用
 formatted=""
 while IFS=$'\t' read -r session idx wname wpath; do
   target="${session}:${idx}"
@@ -63,20 +63,21 @@ while IFS=$'\t' read -r session idx wname wpath; do
   w=$(truncate "$wname" $W_WINDOW)
   p=$(shorten_path "$wpath" $W_PATH)
 
-  formatted+=$(printf "%s %-${W_TARGET}s${SEP}%-${W_WINDOW}s${SEP}%s" \
-    "$marker" "$t" "$w" "$p")
+  formatted+=$(printf "%s${SEP}%s %-${W_TARGET}s${SEP}%-${W_WINDOW}s${SEP}%s" \
+    "$target" "$marker" "$t" "$w" "$p")
   formatted+=$'\n'
 done <<< "$list"
 
-# プレビュー: 選択行から target を抽出し capture-pane で中身を表示
+# プレビュー: 第1フィールド (raw target) を使用
 preview_cmd='
-  target=$(echo {} | cut -f1 | sed "s/^[* ]*//" | awk "{print \$1}")
+  target=$(echo {} | cut -f1)
   tmux capture-pane -t "$target" -p 2>/dev/null || echo "(プレビューなし)"
 '
 
-# fzf (--nth=1,2 で検索範囲を target/window に限定)
+# fzf (--with-nth=2.. で raw_target を非表示、--nth=2,3 で検索範囲を target/window に限定)
 selected=$(printf '%s' "$formatted" | fzf \
   --delimiter=$'\t' \
+  --with-nth=2.. \
   --nth=1,2 \
   --reverse \
   --border=rounded \
@@ -92,8 +93,8 @@ selected=$(printf '%s' "$formatted" | fzf \
   --preview-window="down,60%,border-top" \
 ) || exit 0
 
-# 第1カラム (marker + target) から session:index を抽出
-target=$(printf '%s' "$selected" | cut -f1 | sed 's/^[* ]*//' | awk '{print $1}')
+# 第1フィールド (raw target) を抽出
+target=$(printf '%s' "$selected" | cut -f1)
 
 if [[ -n "$target" ]]; then
   tmux switch-client -t "$target"
