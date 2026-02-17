@@ -188,13 +188,13 @@ case "$cmd" in
       git show-ref --verify --quiet "refs/heads/$base" 2>/dev/null || continue
       while IFS= read -r b; do
         delete_targets+=("$b")
-      done < <(git branch --merged "$base" | grep -v -E "^\*|^\s*(main|master|develop)$" | sed 's/^[ ]*//')
+      done < <(git branch --merged "$base" | grep -v -E "^\*|^\s*(main|master|develop)$" | sed 's/^[+ ]*//')
     done
 
     # 2. リモートで削除済み（gone）のブランチ
     while IFS= read -r b; do
       delete_targets+=("$b")
-    done < <(git branch -vv | grep ': gone]' | awk '{print $1}' | grep -v -E "^\s*(main|master|develop)$")
+    done < <(git branch -vv | grep ': gone]' | sed 's/^[* +]*//' | awk '{print $1}' | grep -v -E "^(main|master|develop)$")
 
     if (( ${#delete_targets[@]} > 0 )); then
       echo "不要ブランチを削除中..."
