@@ -52,6 +52,13 @@ fi
 
 ln -sfv $ROOT/config/git/ignore $HOME/.config/git/ignore
 
+if [ ! -d ~/.config/karabiner/assets/complex_modifications ]; then
+  mkdir -p ~/.config/karabiner/assets/complex_modifications
+  echo '~/.config/karabiner/assets/complex_modifications was created'
+fi
+
+ln -sfv $ROOT/config/karabiner/assets/complex_modifications/ghostty-ime-off-on-ctrl-t.json $HOME/.config/karabiner/assets/complex_modifications/ghostty-ime-off-on-ctrl-t.json
+
 # 必要なパッケージをインストールする
 
 if ! command -v mise &> /dev/null; then
