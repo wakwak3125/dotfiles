@@ -83,13 +83,8 @@ else
   $ROOT/script/install-neovim.sh
 fi
 
-# 言語のインストール
-mise use -g rust
-mise use -g go
-mise use -g node
-
-# ツールのインストール
-mise use ghq
+# 言語・ツールのインストール (config/mise/config.toml に定義済み)
+mise install -y
 
 # gitの設定
 git config --global user.name "Ryo Sakaguchi"
