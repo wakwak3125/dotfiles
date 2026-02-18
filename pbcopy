@@ -1,39 +1,24 @@
-{
-  "title": "Ghostty: Ctrl+T で IME を英数に切り替え",
-  "rules": [
-    {
-      "description": "Ghostty 利用時に Ctrl+T で IME を英数 (ABC) に切り替えてから Ctrl+T を送信",
-      "manipulators": [
-        {
-          "type": "basic",
-          "from": {
-            "key_code": "t",
-            "modifiers": {
-              "mandatory": ["control"],
-              "optional": ["any"]
-            }
-          },
-          "to": [
-            {
-              "select_input_source": {
-                "language": "en"
-              }
-            },
-            {
-              "key_code": "t",
-              "modifiers": ["control"]
-            }
-          ],
-          "conditions": [
-            {
-              "type": "frontmost_application_if",
-              "bundle_identifiers": [
-                "^com\\.mitchellh\\.ghostty$"
-              ]
-            }
-          ]
-        }
-      ]
-    }
-  ]
-}
+#!/bin/sh
+# クロスプラットフォーム クリップボードコピー
+# Usage: echo "text" | pbcopy
+#        pbcopy < file.txt
+
+if [ -n "$WSL_DISTRO_NAME" ] || grep -qi microsoft /proc/version 2>/dev/null; then
+  # WSL2
+  clip.exe
+elif [ "$(uname -s)" = "Darwin" ]; then
+  # macOS
+  /usr/bin/pbcopy
+else
+  # Linux (X11/Wayland)
+  if command -v xclip >/dev/null 2>&1; then
+    xclip -selection clipboard
+  elif command -v xsel >/dev/null 2>&1; then
+    xsel --clipboard --input
+  elif command -v wl-copy >/dev/null 2>&1; then
+    wl-copy
+  else
+    echo "Error: No clipboard tool found. Install xclip, xsel, or wl-clipboard." >&2
+    exit 1
+  fi
+fi

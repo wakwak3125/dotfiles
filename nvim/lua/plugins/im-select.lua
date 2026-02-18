@@ -1,3 +1,8 @@
+-- macOS専用プラグイン: macOS以外では無効化
+if vim.fn.has("mac") ~= 1 then
+  return {}
+end
+
 return {
   "keaising/im-select.nvim",
   event = "VeryLazy",

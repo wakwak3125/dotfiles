@@ -1,15 +1,15 @@
-#! /bin/bash
+#!/bin/bash
 
 # Neovimのインストールスクリプト
 # Usage: ./install-neovim.sh
-# Supports: macOS (x86_64, arm64) and Linux (x86_64)
+# Supports: macOS (x86_64, arm64) and Linux (x86_64, arm64)
 
 set -e
 
 echo "Installing Neovim..."
 
 # OSとアーキテクチャを検出
-OS=$(uname)
+OS=$(uname -s)
 ARCH=$(uname -m)
 
 if [ "$OS" == "Darwin" ]; then
@@ -23,15 +23,20 @@ if [ "$OS" == "Darwin" ]; then
   fi
 else
   # Linuxの場合
-  NVIM_PACKAGE="nvim-linux-x86_64.tar.gz"
-  NVIM_DIR="nvim-linux-x86_64"
+  if [ "$ARCH" == "aarch64" ] || [ "$ARCH" == "arm64" ]; then
+    NVIM_PACKAGE="nvim-linux-arm64.tar.gz"
+    NVIM_DIR="nvim-linux-arm64"
+  else
+    NVIM_PACKAGE="nvim-linux-x86_64.tar.gz"
+    NVIM_DIR="nvim-linux-x86_64"
+  fi
 fi
 
 # Neovimのダウンロードとインストール
-curl -LO https://github.com/neovim/neovim/releases/latest/download/$NVIM_PACKAGE
-sudo rm -rf /opt/$NVIM_DIR
-sudo tar -C /opt -xzf $NVIM_PACKAGE
-rm $NVIM_PACKAGE
+curl -LO "https://github.com/neovim/neovim/releases/latest/download/$NVIM_PACKAGE"
+sudo rm -rf "/opt/$NVIM_DIR"
+sudo tar -C /opt -xzf "$NVIM_PACKAGE"
+rm "$NVIM_PACKAGE"
 
 # PATHの設定
 if [ ! -f ~/.zsh/.zshrc_local ]; then
@@ -40,23 +45,27 @@ if [ ! -f ~/.zsh/.zshrc_local ]; then
 fi
 
 NVIM_BIN_PATH="/opt/$NVIM_DIR/bin"
-if ! grep -q "export PATH=$NVIM_BIN_PATH:\$PATH" ~/.zsh/.zshrc_local; then
+if ! grep -q "export PATH=$NVIM_BIN_PATH:" ~/.zsh/.zshrc_local; then
   echo "export PATH=$NVIM_BIN_PATH:\$PATH" >> ~/.zsh/.zshrc_local
 fi
 
-# NeovimをVimのデフォルトに設定
+# NeovimをVimのデフォルトに設定（冪等）
 NVIM_PATH="$NVIM_BIN_PATH/nvim"
 
 if [ "$OS" == "Darwin" ]; then
-  # macOSの場合はシンボリックリンクを作成
-  echo 'alias vim="nvim"' >> ~/.zsh/.zshrc_local
-  echo 'alias vi="nvim"' >> ~/.zsh/.zshrc_local
+  # macOSの場合はエイリアス（存在チェックで冪等化）
+  if ! grep -q 'alias vim="nvim"' ~/.zsh/.zshrc_local; then
+    echo 'alias vim="nvim"' >> ~/.zsh/.zshrc_local
+  fi
+  if ! grep -q 'alias vi="nvim"' ~/.zsh/.zshrc_local; then
+    echo 'alias vi="nvim"' >> ~/.zsh/.zshrc_local
+  fi
 else
   # Linuxの場合はupdate-alternativesを使用
-  sudo update-alternatives --install /usr/bin/vim vim $NVIM_PATH 100
-  sudo update-alternatives --install /usr/bin/vi vi $NVIM_PATH 100
-  sudo update-alternatives --set vim $NVIM_PATH
-  sudo update-alternatives --set vi $NVIM_PATH
+  sudo update-alternatives --install /usr/bin/vim vim "$NVIM_PATH" 100
+  sudo update-alternatives --install /usr/bin/vi vi "$NVIM_PATH" 100
+  sudo update-alternatives --set vim "$NVIM_PATH"
+  sudo update-alternatives --set vi "$NVIM_PATH"
 fi
 
 git config --global core.editor "nvim"
