@@ -1,9 +1,19 @@
 # Created by newuser for 5.8
 
-fpath=( 
-  $HOME/.zsh/functions 
+# OS判定関数
+is_macos() { [[ "$OSTYPE" == darwin* ]]; }
+is_linux() { [[ "$OSTYPE" == linux* ]]; }
+is_wsl()   { [[ -n "$WSL_DISTRO_NAME" ]] || grep -qi microsoft /proc/version 2>/dev/null; }
+
+fpath=(
+  $HOME/.zsh/functions
   "${fpath[@]}"
 )
+
+# Docker CLI completions (macOSのみ、パスが存在する場合)
+if is_macos && [[ -d "$HOME/.docker/completions" ]]; then
+  fpath=($HOME/.docker/completions $fpath)
+fi
 
 source $ZDOTDIR/.zshrc_local
 
@@ -44,6 +54,7 @@ setopt correct
 setopt interactive_comments
 autoload -Uz compinit
 compinit
+
 zstyle ':completion:*:default' menu select=2
 
 ## History
@@ -61,8 +72,18 @@ setopt pushd_ignore_dups
 DIRSTACKSIZE=100
 
 ## alias
-alias ll='ls -lhaG --color=auto'
+if is_macos; then
+  alias ll='ls -lhaG'
+else
+  alias ll='ls -lha --color=auto'
+fi
 alias g='git'
+
+# WSL2用クリップボードエイリアス
+if is_wsl; then
+  alias pbcopy='clip.exe'
+  alias pbpaste='powershell.exe -NoProfile -Command Get-Clipboard'
+fi
 
 # tmux全セッション削除
 function tmux-kill-all() {
@@ -281,9 +302,3 @@ autoload -Uz wt
 
 #THIS MUST BE AT THE END OF THE FILE FOR SDKMAN TO WORK!!!
 [[ -s "$HOME/.sdkman/bin/sdkman-init.sh" ]] && source "$HOME/.sdkman/bin/sdkman-init.sh"
-
-# The following lines have been added by Docker Desktop to enable Docker CLI completions.
-fpath=(/Users/wakwak/.docker/completions $fpath)
-autoload -Uz compinit
-compinit
-# End of Docker CLI completions
