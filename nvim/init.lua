@@ -1,6 +1,7 @@
 require("config.lazy")
 
 -- 基本項目
+vim.opt.termguicolors = true
 vim.opt.number = true
 vim.opt.expandtab = true
 vim.opt.tabstop = 2
