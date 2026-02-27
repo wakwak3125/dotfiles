@@ -21,6 +21,8 @@ ln -sfv $ROOT/config/tmux/tmux.conf $HOME/.config/tmux/tmux.conf
 mkdir -p $HOME/.local/bin
 ln -sfv $ROOT/script/claude-status $HOME/.local/bin/claude-status
 ln -sfv $ROOT/script/tmux-switcher $HOME/.local/bin/tmux-switcher
+ln -sfv $ROOT/script/tmux-git-switch $HOME/.local/bin/tmux-git-switch
+ln -sfv $ROOT/script/tmux-repo-switch $HOME/.local/bin/tmux-repo-switch
 
 if [ ! -d ~/.config/alacritty ]; then
   mkdir -p ~/.config/alacritty

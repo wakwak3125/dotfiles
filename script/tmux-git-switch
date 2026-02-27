@@ -1,0 +1,56 @@
+#!/usr/bin/env bash
+# tmux-git-switch: fzf を使った git ブランチスイッチャー
+#
+# tmux popup から呼び出す想定:
+#   bind g display-popup -E -w 80% -h 70% "tmux-git-switch"
+
+set -euo pipefail
+
+# カレントペインの作業ディレクトリで実行
+pane_path=$(tmux display-message -p '#{pane_current_path}')
+cd "$pane_path"
+
+if ! git rev-parse --is-inside-work-tree &>/dev/null; then
+  echo "git リポジトリではありません: $pane_path"
+  read -r
+  exit 0
+fi
+
+current_branch=$(git branch --show-current 2>/dev/null || echo "")
+
+# ローカル + リモートブランチ一覧
+branches=$(git branch -a --format='%(refname:short)' --sort=-committerdate 2>/dev/null \
+  | sed 's|^origin/||' \
+  | grep -v '^HEAD$' \
+  | awk '!seen[$0]++')
+
+if [[ -z "$branches" ]]; then
+  echo "ブランチがありません"
+  read -r
+  exit 0
+fi
+
+preview_cmd='
+  branch={}
+  git log --oneline --graph --color=always -20 "$branch" 2>/dev/null || echo "(プレビューなし)"
+'
+
+selected=$(printf '%s\n' "$branches" | fzf \
+  --reverse \
+  --border=rounded \
+  --border-label=" Git Switch " \
+  --header="current: ${current_branch:-detached}" \
+  --header-first \
+  --no-sort \
+  --prompt="  " \
+  --pointer="▶" \
+  --bind="ctrl-k:kill-line" \
+  --color="border:green,label:green,header:dim" \
+  --preview="$preview_cmd" \
+  --preview-window="down,60%,border-top" \
+) || exit 0
+
+if [[ -n "$selected" ]]; then
+  # tmux のペインで git switch を実行
+  tmux send-keys -t "$TMUX_PANE" "git switch '$selected'" Enter
+fi

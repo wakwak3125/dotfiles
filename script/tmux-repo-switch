@@ -1,0 +1,56 @@
+#!/usr/bin/env bash
+# tmux-repo-switch: fzf を使った ghq リポジトリスイッチャー
+#
+# tmux popup から呼び出す想定:
+#   bind g display-popup -E -w 80% -h 70% "tmux-repo-switch"
+#
+# 選択したリポジトリの tmux セッションに切り替える (なければ新規作成)
+
+set -euo pipefail
+
+repos=$(ghq list -p 2>/dev/null)
+
+if [[ -z "$repos" ]]; then
+  echo "リポジトリがありません"
+  read -r
+  exit 0
+fi
+
+current_session=$(tmux display-message -p '#S' 2>/dev/null || echo "")
+
+preview_cmd='
+  repo={}
+  echo -e "\033[1m$(basename "$repo")\033[0m"
+  echo "$repo"
+  echo ""
+  git -C "$repo" log --oneline --graph --color=always -10 2>/dev/null || true
+'
+
+selected=$(printf '%s\n' "$repos" | fzf \
+  --reverse \
+  --border=rounded \
+  --border-label=" Switch Repository " \
+  --header="session: ${current_session}" \
+  --header-first \
+  --no-sort \
+  --prompt="  " \
+  --pointer="▶" \
+  --bind="ctrl-k:kill-line" \
+  --color="border:magenta,label:magenta,header:dim" \
+  --preview="$preview_cmd" \
+  --preview-window="down,60%,border-top" \
+) || exit 0
+
+if [[ -n "$selected" ]]; then
+  session_name=$(basename "$selected" | tr '.' '_')
+
+  if [[ "$current_session" == "$session_name" ]]; then
+    # すでにそのセッションにいる場合は何もしない
+    exit 0
+  elif tmux has-session -t "$session_name" 2>/dev/null; then
+    tmux switch-client -t "$session_name"
+  else
+    tmux new-session -d -s "$session_name" -c "$selected"
+    tmux switch-client -t "$session_name"
+  fi
+fi
