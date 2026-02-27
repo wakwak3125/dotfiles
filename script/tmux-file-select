@@ -26,12 +26,7 @@ trap 'rm -f "$SWITCH_FILE"' EXIT
 
 send_to_pane() {
   local path_str="$1"
-  local result=""
-  for p in $path_str; do
-    result+="@${p} "
-  done
-  result="${result% }"
-  tmux send-keys "$result"
+  tmux send-keys "$path_str"
 }
 
 # ─── ツリーモード ───
