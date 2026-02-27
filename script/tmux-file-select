@@ -1,0 +1,185 @@
+#!/usr/bin/env bash
+# tmux-file-select: fzf でファイルを選び、元ペインに @パス を送る
+#
+# 2つのモード:
+#   検索モード (デフォルト): fd でフラット検索
+#   ツリーモード: ディレクトリを掘り下げて選択
+#
+# モード切替: ctrl-/
+#
+# tmux popup から呼び出す想定:
+#   bind f display-popup -E -w 85% -h 75% "tmux-file-select"
+#   bind F display-popup -E -w 85% -h 75% "tmux-file-select tree"
+
+set -euo pipefail
+
+MODE="${1:-search}"
+
+BASE_DIR="$(tmux display-message -p '#{pane_current_path}')"
+cd "$BASE_DIR"
+
+SEP=$'\t'
+SWITCH_FILE="$(mktemp /tmp/tmux-file-select.XXXXXX)"
+trap 'rm -f "$SWITCH_FILE"' EXIT
+
+# ─── ペインへ送信 ───
+
+send_to_pane() {
+  local path_str="$1"
+  local result=""
+  for p in $path_str; do
+    result+="@${p} "
+  done
+  result="${result% }"
+  tmux send-keys "$result"
+}
+
+# ─── ツリーモード ───
+
+tree_browse() {
+  local current_dir
+  current_dir="$(pwd)"
+
+  while true; do
+    local display_path="${current_dir/#$HOME/\~}"
+
+    local dirs files
+    dirs=$(fd . "$current_dir" --max-depth 1 --type d --hidden --exclude '.git' 2>/dev/null | \
+      sed "s|^${current_dir}/||; s|/$||" | grep -v '^$' | sort) || true
+    files=$(fd . "$current_dir" --max-depth 1 --type f --hidden --exclude '.git' 2>/dev/null | \
+      sed "s|^${current_dir}/||; s|/$||" | grep -v '^$' | sort) || true
+
+    local formatted=""
+    formatted+="..${SEP}../"$'\n'
+
+    if [[ -n "$dirs" ]]; then
+      while IFS= read -r d; do
+        formatted+="${d}${SEP}${d}/"$'\n'
+      done <<< "$dirs"
+    fi
+    if [[ -n "$files" ]]; then
+      while IFS= read -r f; do
+        formatted+="${f}${SEP}${f}"$'\n'
+      done <<< "$files"
+    fi
+
+    local preview_cmd
+    preview_cmd='
+      item=$(echo {} | cut -f1)
+      target="'"$current_dir"'/$item"
+      if [[ -d "$target" ]]; then
+        fd . "$target" --max-depth 1 --hidden --exclude ".git" 2>/dev/null | sed "s|^$target/||" | head -30
+      elif [[ -f "$target" ]]; then
+        bat --color=always --style=numbers --line-range=:50 "$target" 2>/dev/null || head -50 "$target"
+      fi
+    '
+
+    echo -n "" > "$SWITCH_FILE"
+
+    local selected
+    selected=$(printf '%s' "$formatted" | fzf \
+      --delimiter="$SEP" \
+      --with-nth=2 \
+      --reverse \
+      --border=rounded \
+      --border-label=" Tree: ${display_path} " \
+      --header="enter: 開く / ctrl-/: 検索モードへ" \
+      --header-first \
+      --no-sort \
+      --prompt="  " \
+      --pointer="▶" \
+      --color="border:green,label:green,header:dim" \
+      --preview="$preview_cmd" \
+      --preview-window="right,55%,border-left" \
+      --bind="ctrl-/:execute-silent(echo search > '$SWITCH_FILE')+abort" \
+    ) || true
+
+    # モード切替チェック
+    if [[ -s "$SWITCH_FILE" ]]; then
+      search_mode
+      return
+    fi
+
+    # 何も選ばれなかった (ESC/ctrl-c)
+    if [[ -z "$selected" ]]; then
+      exit 0
+    fi
+
+    local item
+    item=$(printf '%s' "$selected" | cut -f1)
+
+    if [[ "$item" == ".." ]]; then
+      current_dir=$(dirname "$current_dir")
+      continue
+    fi
+
+    local target="${current_dir}/${item}"
+
+    if [[ -d "$target" ]]; then
+      current_dir="$target"
+      continue
+    fi
+
+    if [[ -f "$target" ]]; then
+      # BASE_DIR からの相対パスに変換
+      local rel_path
+      rel_path=$(python3 -c "import os; print(os.path.relpath('$target', '$BASE_DIR'))")
+      send_to_pane "$rel_path"
+      return
+    fi
+  done
+}
+
+# ─── 検索モード ───
+
+search_mode() {
+  local preview_cmd='
+    if [[ -f {} ]]; then
+      bat --color=always --style=numbers --line-range=:50 {} 2>/dev/null || head -50 {}
+    fi
+  '
+
+  echo -n "" > "$SWITCH_FILE"
+
+  local selected
+  selected=$(fd --type f --hidden --exclude '.git' 2>/dev/null | fzf \
+    --reverse \
+    --border=rounded \
+    --border-label=" Search Files " \
+    --header="enter: 選択 / tab: 複数選択 / ctrl-/: ツリーモードへ" \
+    --header-first \
+    --prompt="  " \
+    --pointer="▶" \
+    --color="border:cyan,label:cyan,header:dim" \
+    --preview="$preview_cmd" \
+    --preview-window="right,55%,border-left" \
+    --bind="ctrl-/:execute-silent(echo tree > '$SWITCH_FILE')+abort" \
+    --multi \
+  ) || true
+
+  # モード切替チェック
+  if [[ -s "$SWITCH_FILE" ]]; then
+    tree_browse
+    return
+  fi
+
+  if [[ -z "$selected" ]]; then
+    exit 0
+  fi
+
+  local paths=""
+  while IFS= read -r f; do
+    [[ -n "$f" ]] && paths+="$f "
+  done <<< "$selected"
+
+  if [[ -n "$paths" ]]; then
+    send_to_pane "${paths% }"
+  fi
+}
+
+# ─── エントリポイント ───
+
+case "$MODE" in
+  tree) tree_browse ;;
+  *)    search_mode ;;
+esac
