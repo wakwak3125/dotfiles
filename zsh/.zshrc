@@ -7,18 +7,6 @@ fpath=(
 
 source $ZDOTDIR/.zshrc_local
 
-#sdkman
-export SDKMAN_DIR="$HOME/.sdkman"
-export JAVA_HOME=$HOME/.sdkman/candidates/java/current
-
-#golang
-export GOPATH=$HOME/go
-export GOBIN=$GOPATH/bin
-export PATH=$PATH:$GOBIN
-
-#rust
-export PATH=$PATH:$HOME/.cargo/bin
-
 bindkey -e
 autoload -Uz add-zsh-hook
 
@@ -61,7 +49,11 @@ setopt pushd_ignore_dups
 DIRSTACKSIZE=100
 
 ## alias
-alias ll='ls -lhaG --color=auto'
+if [[ "$(uname)" == "Darwin" ]]; then
+  alias ll='ls -lhaG'
+else
+  alias ll='ls -lha --color=auto'
+fi
 alias g='git'
 
 # tmux全セッション削除
@@ -279,11 +271,9 @@ function fgg() {
 # git worktree helper command
 autoload -Uz wt
 
-#THIS MUST BE AT THE END OF THE FILE FOR SDKMAN TO WORK!!!
-[[ -s "$HOME/.sdkman/bin/sdkman-init.sh" ]] && source "$HOME/.sdkman/bin/sdkman-init.sh"
-
-# The following lines have been added by Docker Desktop to enable Docker CLI completions.
-fpath=(/Users/wakwak/.docker/completions $fpath)
-autoload -Uz compinit
-compinit
-# End of Docker CLI completions
+# Docker CLI completions (パスが存在する場合のみ)
+if [[ -d "$HOME/.docker/completions" ]]; then
+  fpath=($HOME/.docker/completions $fpath)
+  autoload -Uz compinit
+  compinit
+fi

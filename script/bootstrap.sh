@@ -4,6 +4,28 @@ cd `dirname $0`
 ROOT=`dirname $(pwd)`
 CONFIG_DIR='~/.config'
 
+# ================================================
+# sudo が必要な処理をまとめて最初に実行
+# ================================================
+if [ "$(uname)" != "Darwin" ]; then
+  echo "==> Installing system packages (sudo required)..."
+  sudo apt update
+  sudo apt install -y \
+    build-essential \
+    openssl \
+    libssl-dev \
+    pkg-config \
+    fzf \
+    ripgrep \
+    xdg-utils
+fi
+
+# Neovimのインストール（sudo が必要）
+$ROOT/script/install-neovim.sh
+
+# ================================================
+# シンボリックリンクの作成
+# ================================================
 ln -sfv $ROOT/ideavimrc $HOME/.ideavimrc
 ln -sfv $ROOT/obsidian.vimrc $HOME/.obsidian.vimrc
 ln -sfv $ROOT/zsh $HOME/.zsh
@@ -17,12 +39,13 @@ fi
 
 ln -sfv $ROOT/config/tmux/tmux.conf $HOME/.config/tmux/tmux.conf
 
-# claude-status コマンドをパスに追加
+# スクリプトをパスに追加
 mkdir -p $HOME/.local/bin
 ln -sfv $ROOT/script/claude-status $HOME/.local/bin/claude-status
 ln -sfv $ROOT/script/tmux-switcher $HOME/.local/bin/tmux-switcher
 ln -sfv $ROOT/script/tmux-git-switch $HOME/.local/bin/tmux-git-switch
 ln -sfv $ROOT/script/tmux-repo-switch $HOME/.local/bin/tmux-repo-switch
+ln -sfv $ROOT/script/tmux-file-select $HOME/.local/bin/tmux-file-select
 
 if [ ! -d ~/.config/alacritty ]; then
   mkdir -p ~/.config/alacritty
@@ -54,35 +77,25 @@ fi
 
 ln -sfv $ROOT/config/git/ignore $HOME/.config/git/ignore
 
-if [ ! -d ~/.config/karabiner/assets/complex_modifications ]; then
-  mkdir -p ~/.config/karabiner/assets/complex_modifications
-  echo '~/.config/karabiner/assets/complex_modifications was created'
+if [ "$(uname)" == "Darwin" ]; then
+  if [ ! -d ~/.config/karabiner/assets/complex_modifications ]; then
+    mkdir -p ~/.config/karabiner/assets/complex_modifications
+    echo '~/.config/karabiner/assets/complex_modifications was created'
+  fi
+
+  ln -sfv $ROOT/config/karabiner/assets/complex_modifications/ghostty-ime-off-on-ctrl-t.json $HOME/.config/karabiner/assets/complex_modifications/ghostty-ime-off-on-ctrl-t.json
 fi
 
-ln -sfv $ROOT/config/karabiner/assets/complex_modifications/ghostty-ime-off-on-ctrl-t.json $HOME/.config/karabiner/assets/complex_modifications/ghostty-ime-off-on-ctrl-t.json
-
-# 必要なパッケージをインストールする
-
+# ================================================
+# ツールのインストール
+# ================================================
 if ! command -v mise &> /dev/null; then
   curl https://mise.run | sh
 fi
 
-# LinuxかmacOSかを分岐してパッケージをインストールする
-if [ "$(uname)" == "Darwin" ]; then
-  # macOSの場合
-  $ROOT/script/install-neovim.sh
-else
-  # Linuxの場合
-  sudo apt update
-  sudo apt install -y \
-    build-essential \
-    openssl \
-    libssl-dev \
-    pkg-config \
-    fzf \
-    ripgrep
-  # Neovimのインストール
-  $ROOT/script/install-neovim.sh
+# tmux plugin manager
+if [ ! -d ~/.tmux/plugins/tpm ]; then
+  git clone https://github.com/tmux-plugins/tpm ~/.tmux/plugins/tpm
 fi
 
 # 言語・ツールのインストール (config/mise/config.toml に定義済み)
