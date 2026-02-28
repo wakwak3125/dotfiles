@@ -1,19 +1,16 @@
 # This is Git's per-user configuration file.
 
 [include]
-  path = /Users/wakwak/delta/themes.gitconfig
+  path = ~/delta/themes.gitconfig
 
 [core]
-  pager = deltaautocrlf
-  autocrlf = inputeditor
+  pager = delta
+  autocrlf = input
   editor = nvim
 
 [user]
-  name = Ryo Sakaguchiemail
+  name = Ryo Sakaguchi
   email = rsakaguchi3125@gmail.com
-
-[ghq]
-  root = /Users/wakwak/src
 
 [alias]
   sw = switch
@@ -42,4 +39,3 @@
 
 [init]
   defaultBranch = master
-
