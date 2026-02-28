@@ -1,5 +1,6 @@
 return {
   "keaising/im-select.nvim",
+  enabled = vim.fn.has("mac") == 1,
   event = "VeryLazy",
   opts = {
     default_im_select = "com.apple.keylayout.ABC",
