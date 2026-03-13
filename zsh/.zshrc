@@ -1,7 +1,7 @@
 # Created by newuser for 5.8
 
-fpath=( 
-  $HOME/.zsh/functions 
+fpath=(
+  $HOME/.zsh/functions
   "${fpath[@]}"
 )
 

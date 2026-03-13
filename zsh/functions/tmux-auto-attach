@@ -28,8 +28,8 @@ tmux-auto-attach() {
   fi
 
   # IDEターミナルの検出と除外
-  # VSCode
-  if [[ -n "$VSCODE_INJECTION" ]] || [[ "$TERM_PROGRAM" == "vscode" ]]; then
+  # VSCode / Cursor
+  if [[ -n "$VSCODE_INJECTION" ]] || [[ "$TERM_PROGRAM" == "vscode" ]] || [[ -n "$VSCODE_RESOLVING_ENVIRONMENT" ]] || [[ "$TERM_PROGRAM" == "cursor" ]]; then
     return 0
   fi
 
