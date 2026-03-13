@@ -19,11 +19,13 @@ if ! git rev-parse --is-inside-work-tree &>/dev/null; then
   return 1
 fi
 
-local repo_root=$(git rev-parse --show-toplevel)
-local worktree_dir="$repo_root/worktrees"
+local repo_root=$(git worktree list | head -1 | awk '{print $1}')
+local repo_parent=$(dirname "$repo_root")
+local repo_name=$(basename "$repo_root")
+local worktree_dir="$repo_parent/worktree/$repo_name"
 
 # tmux 統合用の共通変数
-local tmux_session=$(basename "$repo_root" | tr '.' '_')
+local tmux_session=$(echo "$repo_name" | tr '.' '_')
 local in_tmux=false
 [[ -n "$TMUX" ]] && in_tmux=true
 
