@@ -1,7 +1,7 @@
 # git worktree ヘルパーコマンド（tmux 統合付き）
 # 使い方:
 #   wt add <branch>            - 既存ブランチの worktree を作成（tmux window 自動作成）
-#   wt add -b <branch>         - 新しいブランチを作成して worktree を追加（tmux window 自動作成）
+#   wt add -b <branch> [base]  - 新しいブランチを作成して worktree を追加（tmux window 自動作成）
 #   wt rm <branch>             - worktree を削除（tmux window 自動削除）
 #   wt rm .                    - 現在の worktree を削除（tmux window 自動削除）
 #   wt rm -b <branch>          - worktree とブランチを削除（tmux window 自動削除）
@@ -31,6 +31,7 @@ case "$cmd" in
   add)
     local create_branch=false
     local branch_name=""
+    local base_branch=""
 
     # オプション解析
     while [[ $# -gt 0 ]]; do
@@ -40,15 +41,20 @@ case "$cmd" in
           shift
           ;;
         *)
-          branch_name=$1
+          if [[ -z "$branch_name" ]]; then
+            branch_name=$1
+          else
+            base_branch=$1
+          fi
           shift
           ;;
       esac
     done
 
     if [[ -z "$branch_name" ]]; then
-      echo "使い方: wt add [-b] <branch>" >&2
+      echo "使い方: wt add [-b] <branch> [base]" >&2
       echo "  -b, --branch  新しいブランチを作成" >&2
+      echo "  base          ベースブランチ（省略時は現在の HEAD）" >&2
       return 1
     fi
 
@@ -60,7 +66,11 @@ case "$cmd" in
 
     if [[ "$create_branch" == true ]]; then
       # 新しいブランチを作成して worktree を追加
-      git worktree add -b "$branch_name" "$worktree_dir/$dir_name"
+      if [[ -n "$base_branch" ]]; then
+        git worktree add -b "$branch_name" "$worktree_dir/$dir_name" "$base_branch"
+      else
+        git worktree add -b "$branch_name" "$worktree_dir/$dir_name"
+      fi
     else
       # 既存のブランチで worktree を追加
       git worktree add "$worktree_dir/$dir_name" "$branch_name"
@@ -249,7 +259,7 @@ case "$cmd" in
     echo ""
     echo "コマンド:"
     echo "  add <branch>            既存ブランチの worktree を作成"
-    echo "  add -b <branch>         新しいブランチを作成して worktree を追加"
+    echo "  add -b <branch> [base]  新しいブランチを作成して worktree を追加（base 省略時は HEAD）"
     echo "  rm <branch|.>           worktree を削除（. で現在の worktree）"
     echo "  rm -b <branch|.>        worktree とブランチを削除（. で現在の worktree）"
     echo "  list                    worktree 一覧を表示"
