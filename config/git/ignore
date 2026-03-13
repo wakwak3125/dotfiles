@@ -8,3 +8,6 @@ buildSrc/.kotlin
 
 worktrees/
 worktrees/**
+.worktreeinclude
+.codex
+.browser-agent

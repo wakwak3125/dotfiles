@@ -81,6 +81,8 @@ eval "$(sheldon source)"
 eval "$(~/.local/bin/mise activate zsh)"
 eval "$(direnv hook zsh)"
 
+export JAVA_HOME="$(mise where java)"
+
 # starship prompt
 eval "$(starship init zsh)"
 

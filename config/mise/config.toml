@@ -2,7 +2,7 @@
 bat = "latest"
 fd = "latest"
 go = "latest"
-java = "latest"
+java = "21"
 node = "latest"
 rust = "latest"
 starship = "latest"

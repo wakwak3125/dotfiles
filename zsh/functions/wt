@@ -3,7 +3,9 @@
 #   wt add <branch>            - 既存ブランチの worktree を作成（tmux window 自動作成）
 #   wt add -b <branch>         - 新しいブランチを作成して worktree を追加（tmux window 自動作成）
 #   wt rm <branch>             - worktree を削除（tmux window 自動削除）
+#   wt rm .                    - 現在の worktree を削除（tmux window 自動削除）
 #   wt rm -b <branch>          - worktree とブランチを削除（tmux window 自動削除）
+#   wt rm -b .                 - 現在の worktree とブランチを削除（tmux window 自動削除）
 #   wt list                    - worktree 一覧を表示
 #   wt prune                   - リモート同期 + worktree の整理
 #   wt clean                   - リモート同期 + マージ済みブランチ削除 + worktree の整理
@@ -100,9 +102,24 @@ case "$cmd" in
     done
 
     if [[ -z "$branch_name" ]]; then
-      echo "使い方: wt rm [-b] <branch>" >&2
+      echo "使い方: wt rm [-b] <branch|.>" >&2
       echo "  -b, --branch  ブランチも削除" >&2
+      echo "  .             現在の worktree を対象にする" >&2
       return 1
+    fi
+
+    # "." が指定された場合は現在の worktree/ブランチを解決
+    if [[ "$branch_name" == "." ]]; then
+      local current_wt=$(git rev-parse --show-toplevel 2>/dev/null)
+      if [[ "$current_wt" == "$repo_root" ]]; then
+        echo "エラー: メインの worktree では実行できません" >&2
+        return 1
+      fi
+      branch_name=$(git symbolic-ref --short HEAD 2>/dev/null)
+      if [[ -z "$branch_name" ]]; then
+        echo "エラー: 現在のブランチを取得できません" >&2
+        return 1
+      fi
     fi
 
     # ディレクトリ名はブランチ名の最後の部分だけを使う (feature/login -> login)
@@ -233,8 +250,8 @@ case "$cmd" in
     echo "コマンド:"
     echo "  add <branch>            既存ブランチの worktree を作成"
     echo "  add -b <branch>         新しいブランチを作成して worktree を追加"
-    echo "  rm <branch>             worktree を削除"
-    echo "  rm -b <branch>          worktree とブランチを削除"
+    echo "  rm <branch|.>           worktree を削除（. で現在の worktree）"
+    echo "  rm -b <branch|.>        worktree とブランチを削除（. で現在の worktree）"
     echo "  list                    worktree 一覧を表示"
     echo "  prune                   リモート同期 + worktree の整理"
     echo "  clean                   リモート同期 + マージ済みブランチ削除 + worktree の整理"
