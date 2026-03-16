@@ -25,6 +25,7 @@ dotfiles/
 │   ├── claude-status # Claude Code ダッシュボード
 │   ├── install-neovim.sh    # Neovim インストーラ
 │   ├── install-tools-macos.sh # macOS ツールインストール
+│   ├── mise.toml            # mise タスク定義
 │   ├── tmux-file-select     # FZF ファイルセレクター
 │   ├── tmux-git-switch      # FZF git ブランチスイッチャー
 │   ├── tmux-repo-switch     # FZF ghq リポジトリスイッチャー

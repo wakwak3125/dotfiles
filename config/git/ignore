@@ -3,6 +3,8 @@
 buildSrc/.kotlin
 .idea/AndroidProjectSystem.xml
 .idea/vcs.xml
+.idea/*.iml
+.idea/.gitignore
 
 **/.claude/settings.local.json
 
