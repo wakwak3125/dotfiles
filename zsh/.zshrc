@@ -5,6 +5,17 @@ fpath=(
   "${fpath[@]}"
 )
 
+## Env
+eval "$(sheldon source)"
+eval "$(~/.local/bin/mise activate zsh)"
+eval "$(direnv hook zsh)"
+export JAVA_HOME="$(mise where java)"
+
+## Claude
+export CLAUDE_CODE_NO_FLICKER=1
+export CLAUDE_CODE_DISABLE_1M_CONTEXT=1
+export CLAUDE_AUTOCOMPACT_PCT_OVERRIDE=70
+
 source $ZDOTDIR/.zshrc_local
 
 bindkey -e
@@ -75,13 +86,6 @@ function tmux-kill-all() {
     echo "Cancelled."
   fi
 }
-
-## Env
-eval "$(sheldon source)"
-eval "$(~/.local/bin/mise activate zsh)"
-eval "$(direnv hook zsh)"
-
-export JAVA_HOME="$(mise where java)"
 
 # starship prompt
 eval "$(starship init zsh)"

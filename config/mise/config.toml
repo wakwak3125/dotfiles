@@ -1,6 +1,9 @@
 [tools]
 bat = "latest"
+bun = "latest"
+codex = "latest"
 fd = "latest"
+uv = "latest"
 go = "latest"
 java = "21"
 node = "latest"

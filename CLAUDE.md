@@ -25,13 +25,14 @@ dotfiles/
 │   ├── claude-status # Claude Code ダッシュボード
 │   ├── install-neovim.sh    # Neovim インストーラ
 │   ├── install-tools-macos.sh # macOS ツールインストール
-│   ├── mise.toml            # mise タスク定義
+│   ├── mise.toml            # mise タスク定義 (ghq等; メイン設定は config/mise/config.toml)
 │   ├── tmux-file-select     # FZF ファイルセレクター
 │   ├── tmux-git-switch      # FZF git ブランチスイッチャー
 │   ├── tmux-repo-switch     # FZF ghq リポジトリスイッチャー
 │   └── tmux-switcher        # FZF tmux ウィンドウスイッチャー
 ├── zsh/
 │   ├── .zshrc        # メインシェル設定
+│   ├── .zshrc_local  # マシン固有設定 (gitignore対象; Homebrew PATH, gcloud等)
 │   └── functions/    # カスタム関数 (wt, tmux-auto-attach, _gh)
 ├── zshenv            # 環境変数
 ├── ideavimrc         # IntelliJ IdeaVim 設定
@@ -58,6 +59,7 @@ bootstrap.sh が以下を実行:
 - **symlink**: 設定ファイルは symlink で管理。直接 `~/.config/` を編集しない
 - **sheldon**: プラグイン変更後は `sheldon lock` が必要
 - **mise**: ツール追加/変更後は `mise install` で反映
+- **zshrc_local**: マシン固有設定（gitignore対象）。シェルデバッグ時は `.zshrc` から読み込まれることに注意
 
 ## 主要ツールと設定のポイント
 
