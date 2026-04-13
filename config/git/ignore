@@ -13,3 +13,4 @@ worktrees/**
 .worktreeinclude
 .codex
 .browser-agent
+.forge-workspace
