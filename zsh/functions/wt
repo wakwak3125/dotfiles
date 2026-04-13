@@ -1,14 +1,31 @@
 # git worktree ヘルパーコマンド（tmux 統合付き）
 # 使い方:
-#   wt add <branch>            - 既存ブランチの worktree を作成（tmux window 自動作成）
-#   wt add -b <branch> [base]  - 新しいブランチを作成して worktree を追加（tmux window 自動作成）
-#   wt rm <branch>             - worktree を削除（tmux window 自動削除）
-#   wt rm .                    - 現在の worktree を削除（tmux window 自動削除）
-#   wt rm -b <branch>          - worktree とブランチを削除（tmux window 自動削除）
-#   wt rm -b .                 - 現在の worktree とブランチを削除（tmux window 自動削除）
-#   wt list                    - worktree 一覧を表示
-#   wt prune                   - リモート同期 + worktree の整理
-#   wt clean                   - リモート同期 + マージ済みブランチ削除 + worktree の整理
+#   wt [-s] add <branch>            - 既存ブランチの worktree を作成（tmux window 自動作成）
+#   wt [-s] add -b <branch> [base]  - 新しいブランチを作成して worktree を追加（tmux window 自動作成）
+#   wt [-s] rm <branch>             - worktree を削除（tmux window 自動削除）
+#   wt [-s] rm .                    - 現在の worktree を削除（tmux window 自動削除）
+#   wt [-s] rm -b <branch>          - worktree とブランチを削除（tmux window 自動削除）
+#   wt [-s] rm -b .                 - 現在の worktree とブランチを削除（tmux window 自動削除）
+#   wt list                         - worktree 一覧を表示
+#   wt prune                        - リモート同期 + worktree の整理
+#   wt clean                        - リモート同期 + マージ済みブランチ削除 + worktree の整理
+#
+# オプション:
+#   -s, --silent  tmux のウィンドウ作成・切り替え・削除をスキップする
+
+# グローバルオプション解析
+local silent=false
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    -s|--silent)
+      silent=true
+      shift
+      ;;
+    *)
+      break
+      ;;
+  esac
+done
 
 local cmd=$1
 shift
@@ -78,8 +95,8 @@ case "$cmd" in
       git worktree add "$worktree_dir/$dir_name" "$branch_name"
     fi
 
-    # tmux 内なら window を自動作成
-    if [[ "$in_tmux" == true ]] && [[ -d "$worktree_dir/$dir_name" ]]; then
+    # tmux 内なら window を自動作成（silent モードではスキップ）
+    if [[ "$silent" != true ]] && [[ "$in_tmux" == true ]] && [[ -d "$worktree_dir/$dir_name" ]]; then
       if ! tmux has-session -t "$tmux_session" 2>/dev/null; then
         tmux new-session -d -s "$tmux_session" -c "$worktree_dir/$dir_name" -n "$dir_name"
         tmux switch-client -t "$tmux_session:$dir_name"
@@ -144,9 +161,9 @@ case "$cmd" in
       return 1
     fi
 
-    # tmux window の削除判定
+    # tmux window の削除判定（silent モードではスキップ）
     local kill_window_after=false
-    if [[ "$in_tmux" == true ]] && tmux has-session -t "$tmux_session" 2>/dev/null; then
+    if [[ "$silent" != true ]] && [[ "$in_tmux" == true ]] && tmux has-session -t "$tmux_session" 2>/dev/null; then
       local current_window=$(tmux display-message -p '#W')
       if [[ "$current_window" == "$dir_name" ]]; then
         # 現在のウィンドウなので worktree 削除後に kill
@@ -230,8 +247,8 @@ case "$cmd" in
       for branch in "${delete_targets[@]}"; do
         local wt_for_branch="${branch_wt_map[$branch]}"
         if [[ -n "$wt_for_branch" && -d "$wt_for_branch" ]]; then
-          # tmux window を閉じる
-          if [[ "$in_tmux" == true ]] && tmux has-session -t "$tmux_session" 2>/dev/null; then
+          # tmux window を閉じる（silent モードではスキップ）
+          if [[ "$silent" != true ]] && [[ "$in_tmux" == true ]] && tmux has-session -t "$tmux_session" 2>/dev/null; then
             local wt_dir_name=$(basename "$wt_for_branch")
             tmux kill-window -t "$tmux_session:$wt_dir_name" 2>/dev/null
           fi
@@ -257,7 +274,10 @@ case "$cmd" in
     ;;
 
   *)
-    echo "使い方: wt <command> [args]"
+    echo "使い方: wt [-s] <command> [args]"
+    echo ""
+    echo "オプション:"
+    echo "  -s, --silent            tmux 操作をスキップ（ブランチ・worktree 操作のみ実行）"
     echo ""
     echo "コマンド:"
     echo "  add <branch>            既存ブランチの worktree を作成"
