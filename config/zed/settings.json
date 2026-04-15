@@ -11,6 +11,17 @@
     "diagnostics": false,
     "metrics": false
   },
+  "auto_install_extensions": {
+    "kotlin": true,
+    "java": true,
+    "groovy": true,
+    "dockerfile": true
+  },
+  "languages": {
+    "Kotlin": {
+      "language_servers": ["kotlin-lsp"]
+    }
+  },
   "session": {
     "trust_all_worktrees": true
   },
