@@ -77,6 +77,13 @@ fi
 
 ln -sfv $ROOT/config/git/ignore $HOME/.config/git/ignore
 
+if [ ! -d ~/.config/zed ]; then
+  mkdir -p ~/.config/zed
+  echo '~/.config/zed was created'
+fi
+
+ln -sfv $ROOT/config/zed/settings.json $HOME/.config/zed/settings.json
+
 if [ "$(uname)" == "Darwin" ]; then
   if [ ! -d ~/.config/karabiner/assets/complex_modifications ]; then
     mkdir -p ~/.config/karabiner/assets/complex_modifications

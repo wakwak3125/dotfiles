@@ -16,7 +16,8 @@ dotfiles/
 │   ├── sheldon/plugins.toml # zsh プラグイン管理
 │   ├── starship.toml        # プロンプトテーマ
 │   ├── terminator/   # Terminator 設定 (Linux)
-│   └── tmux/tmux.conf       # tmux 設定 (prefix: Ctrl+T)
+│   ├── tmux/tmux.conf       # tmux 設定 (prefix: Ctrl+T)
+│   └── zed/settings.json    # Zed エディタ設定 (macOS)
 ├── gitconfig         # Git グローバル設定
 ├── nvim/init.lua     # Neovim 設定 (lazy.nvim)
 ├── pbcopy            # pbcopy polyfill (Linux)
