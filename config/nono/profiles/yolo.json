@@ -7,10 +7,12 @@
   "extends": "claude-code",
   "policy": {
     "add_allow_read": [
-      "$HOME/.ssh",
       "$HOME/.local/share/mise",
       "$HOME/.local/bin",
       "$HOME/delta"
+    ],
+    "add_allow_readwrite": [
+      "$HOME/.ssh"
     ]
   }
 }
