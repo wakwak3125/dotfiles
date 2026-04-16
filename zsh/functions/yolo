@@ -23,9 +23,8 @@ fi
 local -a nono_args=(
   --profile yolo
   --allow-cwd
-  --read-file "$HOME/.ssh/config"
+  --read "$HOME/.ssh"
   --read-file "$HOME/.ssh/id_ed25519"
-  --read-file "$HOME/.ssh/id_ed25519.pub"
   --allow-file "$HOME/.ssh/known_hosts"
 )
 
