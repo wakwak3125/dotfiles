@@ -23,7 +23,10 @@ fi
 local -a nono_args=(
   --profile yolo
   --allow-cwd
-  --allow "$HOME/.ssh"
+  --read-file "$HOME/.ssh/config"
+  --read-file "$HOME/.ssh/id_ed25519"
+  --read-file "$HOME/.ssh/id_ed25519.pub"
+  --allow-file "$HOME/.ssh/known_hosts"
 )
 
 # yolo 固有のオプションを抽出し、残りは claude に渡す
