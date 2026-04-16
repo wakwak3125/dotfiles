@@ -5,14 +5,15 @@
     "description": "claude-code profile with SSH and dev tool access for yolo sessions"
   },
   "extends": "claude-code",
-  "policy": {
-    "add_allow_read": [
+  "filesystem": {
+    "read": [
       "$HOME/.local/share/mise",
       "$HOME/.local/bin",
-      "$HOME/delta"
+      "$HOME/delta",
+      "$HOME/.ssh/config"
     ],
-    "add_allow_readwrite": [
-      "$HOME/.ssh"
+    "allow_file": [
+      "$HOME/.ssh/known_hosts"
     ]
   }
 }
