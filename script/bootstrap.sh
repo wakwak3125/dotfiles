@@ -84,13 +84,6 @@ fi
 
 ln -sfv $ROOT/config/zed/settings.json $HOME/.config/zed/settings.json
 
-if [ ! -d ~/.config/nono/profiles ]; then
-  mkdir -p ~/.config/nono/profiles
-  echo '~/.config/nono/profiles was created'
-fi
-
-ln -sfv $ROOT/config/nono/profiles/yolo.json $HOME/.config/nono/profiles/yolo.json
-
 if [ "$(uname)" == "Darwin" ]; then
   if [ ! -d ~/.config/karabiner/assets/complex_modifications ]; then
     mkdir -p ~/.config/karabiner/assets/complex_modifications

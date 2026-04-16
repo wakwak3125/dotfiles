@@ -278,7 +278,7 @@ function fgg() {
 # git worktree helper command
 autoload -Uz wt
 
-# nono + Claude Code YOLO mode
+# Claude Code YOLO mode
 autoload -Uz yolo
 compdef yolo=claude
 

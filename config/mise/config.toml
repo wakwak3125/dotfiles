@@ -1,5 +1,4 @@
 [tools]
-"ubi:always-further/nono" = "latest"
 bat = "latest"
 bun = "latest"
 codex = "latest"
