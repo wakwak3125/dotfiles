@@ -20,7 +20,8 @@ brew install \
   ripgrep \
   direnv \
   sheldon \
-  jq
+  jq \
+  secretive
 
 # macism (IME switcher for Neovim)
 echo "==> Installing macism..."
