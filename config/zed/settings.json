@@ -19,7 +19,7 @@
   },
   "languages": {
     "Kotlin": {
-      "language_servers": ["kotlin-lsp"]
+      "language_servers": ["kotlin-language-server"]
     }
   },
   "session": {
