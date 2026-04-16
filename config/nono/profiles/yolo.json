@@ -9,11 +9,10 @@
     "read": [
       "$HOME/.local/share/mise",
       "$HOME/.local/bin",
-      "$HOME/delta",
-      "$HOME/.ssh/config"
+      "$HOME/delta"
     ],
-    "allow_file": [
-      "$HOME/.ssh/known_hosts"
+    "allow": [
+      "$HOME/.ssh"
     ]
   }
 }
