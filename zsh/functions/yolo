@@ -23,6 +23,7 @@ fi
 local -a nono_args=(
   --profile yolo
   --allow-cwd
+  --allow "$HOME/.ssh"
 )
 
 # yolo 固有のオプションを抽出し、残りは claude に渡す

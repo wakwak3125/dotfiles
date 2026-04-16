@@ -10,9 +10,6 @@
       "$HOME/.local/share/mise",
       "$HOME/.local/bin",
       "$HOME/delta"
-    ],
-    "allow": [
-      "$HOME/.ssh"
     ]
   }
 }
