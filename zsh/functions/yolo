@@ -1,0 +1,51 @@
+# nono + Claude Code YOLO mode ラッパー
+# nono のカーネルレベルサンドボックス（macOS: Seatbelt / Linux: Landlock）で
+# ファイルシステムを保護しつつ Claude Code を自律実行する
+#
+# 使い方:
+#   yolo "JWT認証を実装せよ"
+#   yolo --model sonnet "テストを書け"
+#   yolo                              # 対話モード
+#   yolo --rollback "大規模リファクタリング"   # 変更をアトミックにロールバック可能
+#
+# 何が守られるか:
+#   - CWD 外への書き込みをカーネルが拒否（~/.ssh, ~/.aws 等）
+#   - 子プロセス（npm スクリプト等）にも制限が継承
+#   - ネットワークは許可（npm install, git push, API 呼び出し動作）
+#   - --rollback 指定時はセッション終了後に変更を巻き戻し可能
+
+if ! command -v nono &>/dev/null; then
+  echo "エラー: nono がインストールされていません" >&2
+  echo "  mise install  # config/mise/config.toml で管理" >&2
+  return 1
+fi
+
+local -a nono_args=(
+  --profile claude-code
+  --allow-cwd
+  --read ~/.local/share/mise
+  --read ~/.local/bin
+  --read ~/delta
+)
+
+# yolo 固有のオプションを抽出し、残りは claude に渡す
+local -a claude_args=()
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --rollback)
+      nono_args+=(--rollback)
+      shift
+      ;;
+    --block-net)
+      nono_args+=(--block-net)
+      shift
+      ;;
+    *)
+      claude_args+=("$1")
+      shift
+      ;;
+  esac
+done
+
+nono run "${nono_args[@]}" -- \
+  claude --dangerously-skip-permissions "${claude_args[@]}"

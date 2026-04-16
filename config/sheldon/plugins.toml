@@ -24,3 +24,6 @@ github = 'zsh-users/zsh-history-substring-search'
 [plugins.zsh-completions]
 github = 'zsh-users/zsh-completions'
 
+[plugins.zsh-claudecode-completion]
+github = 'wbingli/zsh-claudecode-completion'
+

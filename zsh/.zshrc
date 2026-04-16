@@ -278,6 +278,10 @@ function fgg() {
 # git worktree helper command
 autoload -Uz wt
 
+# nono + Claude Code YOLO mode
+autoload -Uz yolo
+compdef yolo=claude
+
 # Docker CLI completions (パスが存在する場合のみ)
 if [[ -d "$HOME/.docker/completions" ]]; then
   fpath=($HOME/.docker/completions $fpath)
