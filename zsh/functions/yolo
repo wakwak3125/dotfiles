@@ -21,11 +21,8 @@ if ! command -v nono &>/dev/null; then
 fi
 
 local -a nono_args=(
-  --profile claude-code
+  --profile yolo
   --allow-cwd
-  --read ~/.local/share/mise
-  --read ~/.local/bin
-  --read ~/delta
 )
 
 # yolo 固有のオプションを抽出し、残りは claude に渡す

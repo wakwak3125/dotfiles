@@ -1,0 +1,16 @@
+{
+  "meta": {
+    "name": "yolo",
+    "version": "1.0.0",
+    "description": "claude-code profile with SSH and dev tool access for yolo sessions"
+  },
+  "extends": "claude-code",
+  "policy": {
+    "add_allow_read": [
+      "$HOME/.ssh",
+      "$HOME/.local/share/mise",
+      "$HOME/.local/bin",
+      "$HOME/delta"
+    ]
+  }
+}
