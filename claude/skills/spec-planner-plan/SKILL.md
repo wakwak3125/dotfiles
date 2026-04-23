@@ -1,239 +1,250 @@
 ---
 name: spec-planner-plan
-description: 要求仕様を入力として、architect / modeler / requirements-analyst / critic / scribe の 5 人 subagent チームで高度なソフトウェア設計レビュー＆改訂を行う。critic の重大指摘が尽きるまでラウンドを動的に回す。成果物は設計書（design.md）・データモデル（data-model.md：ER図＋テーブル定義）・要求対応表・ユースケースごとのデータ構造・残タスク・議事録・改訂履歴。設計の検討・設計レビュー・仕様策定の議論を深めたいときに使う。
+description: 要求仕様を入力として、architect / modeler / requirements-analyst / critic / scribe の単発 subagent を逐次呼び出して高度なソフトウェア設計レビュー＆改訂を行う。critic 3 段階（軽量 2 回 + 最終 1 回）で blocker ゼロまで needs-revise ループを回す。成果物は設計書（design.md）・データモデル（data-model.md：ER図＋テーブル定義）・要求対応表・ユースケースごとのデータ構造・残タスク・議事録・改訂履歴・critic 指摘簿・作業状態。設計の検討・設計レビュー・仕様策定の議論を深めたいときに使う。
 argument-hint: <設計対象のコンテキストと任意のチーム構成>
 disable-model-invocation: true
-allowed-tools: Read, Write, Edit, Glob, Grep, Bash, Agent, TeamCreate, TeamDelete, SendMessage, TaskCreate, TaskList, TaskUpdate, TaskGet
+allowed-tools: Read, Write, Edit, Glob, Grep, Bash, Agent, TaskCreate, TaskList, TaskUpdate, TaskGet
 ---
 
-# spec-planner-plan: 要求 → 設計 を 5 人チームで鍛えるスキル
+# spec-planner-plan: 要求 → 設計 を単発 subagent の逐次フローで鍛えるスキル
 
-あなたはこのスキルのファシリテーター（エージェントチームの**リーダー**）として動く。
-入力から設計対象を読み取り、subagent 定義に基づく agent team を編成し、
-5〜10 ラウンドの批判的議論と改訂を経て成果物を仕上げる。
+あなたはこのスキルのファシリテーター（**オーケストレーター**）として動く。
+入力から設計対象を読み取り、subagent 定義に基づく**単発 `Agent` 呼び出し**を逐次発火し、
+critic の blocker 指摘が尽きるまで needs-revise ループを回して成果物を仕上げる。
+
+**Agent-Team は使わない**。`TeamCreate` / `SendMessage` / `TeamDelete` は呼ばない。各 subagent は使い捨てで、1 回の呼び出しごとにファイルへ成果物を吐き出し、メインへは 1 行サマリだけ返す。状態は `task-state.md` / `critic-findings.md` に永続化し、メインのコンテキストに議論を溜めない。
 
 ## 入力
 
 `$ARGUMENTS` には以下が含まれる:
 - **何についての設計か**（必須）: 対象システム・機能の説明、既存コード参照、要求仕様の要点
-- **チーム構成**（任意）: 既定の 5 人に追加したい専門家、除外したいメンバー、特別な指示
+- **チーム構成**（任意）: 追加したい専門家（ehr / receipt 等）、除外したいメンバー、特別な指示
 
 例:
 - `ECサイトの注文キャンセル機能の設計。返金フローと在庫戻しも含む。`
-- `マルチテナント課金基盤。デフォルトチームに加えて security-expert を追加。`
+- `マルチテナント課金基盤。デフォルトに加えて security-expert 視点を critic に強めに入れる。`
 
 ---
 
 ## フェーズ 0: 事前チェックと準備
 
-### 0-1. Agent Teams が有効かを確認
+### 0-1. 作業ディレクトリの準備
 
-- 現在の値: !`echo "${CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS:-unset}"`
-
-上記が `unset` または `0` なら、次のように伝えて中断する:
-
-> Agent Teams が無効です。以下のいずれかで有効化してください:
-> - `~/.claude/settings.json` に `{"env": {"CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"}}` を追加
-> - もしくは現在のシェルで `export CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` してから Claude Code を再起動
-
-有効なら次へ進む。
-
-### 0-2. 作業ディレクトリの準備
-
-対象に短いスラグ（kebab-case、英数字）を付与し、`./spec-planner-output/<slug>/` を作成する。
-既存なら `-v2`, `-v3` で避ける。
+対象に短いスラグ（kebab-case、英数字）を付与し、`./spec-planner-output/<slug>/` を作成する。既存なら `-v2`, `-v3` で避ける。
 
 テンプレートをコピーして初期化する:
 
 ```
-cp ~/.claude/skills/spec-planner-plan/templates/design.md              ./spec-planner-output/<slug>/design.md
-cp ~/.claude/skills/spec-planner-plan/templates/data-model.md          ./spec-planner-output/<slug>/data-model.md
+cp ~/.claude/skills/spec-planner-plan/templates/design.md               ./spec-planner-output/<slug>/design.md
+cp ~/.claude/skills/spec-planner-plan/templates/data-model.md           ./spec-planner-output/<slug>/data-model.md
 cp ~/.claude/skills/spec-planner-plan/templates/requirements-mapping.md ./spec-planner-output/<slug>/requirements-mapping.md
-cp ~/.claude/skills/spec-planner-plan/templates/usecases.md            ./spec-planner-output/<slug>/usecases.md
-cp ~/.claude/skills/spec-planner-plan/templates/open-issues.md         ./spec-planner-output/<slug>/open-issues.md
-cp ~/.claude/skills/spec-planner-plan/templates/minutes.md             ./spec-planner-output/<slug>/minutes.md
-cp ~/.claude/skills/spec-planner-plan/templates/revision-history.md    ./spec-planner-output/<slug>/revision-history.md
+cp ~/.claude/skills/spec-planner-plan/templates/usecases.md             ./spec-planner-output/<slug>/usecases.md
+cp ~/.claude/skills/spec-planner-plan/templates/open-issues.md          ./spec-planner-output/<slug>/open-issues.md
+cp ~/.claude/skills/spec-planner-plan/templates/minutes.md              ./spec-planner-output/<slug>/minutes.md
+cp ~/.claude/skills/spec-planner-plan/templates/revision-history.md     ./spec-planner-output/<slug>/revision-history.md
+cp ~/.claude/skills/spec-planner-plan/templates/critic-findings.md      ./spec-planner-output/<slug>/critic-findings.md
+cp ~/.claude/skills/spec-planner-plan/templates/task-state.md           ./spec-planner-output/<slug>/task-state.md
 ```
 
-`data-model.md` は**テーブル定義と ER 図の一次情報**、`design.md` には設計判断のみを書く。`revision-history.md` は初期状態では空テンプレートのまま（`spec-planner-revise` が使用する）。
+- `data-model.md`: テーブル定義と ER 図の一次情報
+- `design.md`: 設計判断のみ（`{TITLE}` をこの段階で差し替え）
+- `revision-history.md`: 初期は空のまま（`spec-planner-revise` が使用）
+- `critic-findings.md`: critic 指摘の表形式簿。needs-revise ループの一次情報
+- `task-state.md`: 現在フェーズ・次アクション・blocker 残数。compaction 耐性のための最小状態
 
-`design.md` の `{TITLE}` を差し替え、作業ディレクトリをユーザーに通知する。
+作業ディレクトリの絶対パスをユーザーに 1 行で通知する。
 
-### 0-3. チーム編成
+### 0-2. subagent 編成
 
-既定チームは次の 5 人（subagent 定義は `~/.claude/agents/` にある）:
+既定は次の 5 役（subagent 定義は `~/.claude/agents/spec-planner-*.md`）。このスキルでは**常駐させず、必要なステップで 1 回だけ単発 `Agent` として呼ぶ**。
 
-| メンバー | subagent 型 | 役割 |
-|---------|------------|-----|
-| architect | `spec-planner-architect` | 全体設計・モジュール境界 |
-| modeler | `spec-planner-modeler` | データモデル・ER図・ユースケース |
-| analyst | `spec-planner-requirements-analyst` | 要求分解・対応表 |
-| critic | `spec-planner-critic` | 批判的レビュー (devil's advocate) |
-| scribe | `spec-planner-scribe` | 議事録・文書整合性 |
+| 役 | subagent_type | 担当ファイル / 役割 |
+|---|---|---|
+| analyst | `spec-planner-requirements-analyst` | `requirements-mapping.md`（要求分解・対応表） |
+| architect | `spec-planner-architect` | `design.md` / `open-issues.md`（全体設計・モジュール境界） |
+| modeler | `spec-planner-modeler` | `data-model.md` / `usecases.md`（テーブル・ER・ユースケース） |
+| critic | `spec-planner-critic` | `critic-findings.md`（批判的レビュー。本文は書かず指摘行のみ追記） |
+| scribe | `spec-planner-scribe` | 最終統合時のみ起動。全ファイルの整合・削減・冒頭整備・議事総括 |
 
-**ドメイン別オプション専門家**（対象ドメインに応じて追加）:
+**ドメイン別オプション専門家**（`$ARGUMENTS` 検出または明示指定で追加）:
 
-| メンバー | subagent 型 | 役割 | 追加条件 |
-|---------|------------|-----|---------|
-| ehr | `japan-ehr-specialist` | 日本の電子カルテ法令・標準規格・医療DX政策 | `$ARGUMENTS` に「電子カルテ」「EHR」「診療録」「SS-MIX」「FHIR」「医療情報」「電子処方箋」「PHR」等のキーワードを検出、または明示指定 |
-| receipt | `japan-receipt-computer-specialist` | 日本の診療報酬・レセコン・算定要件・審査実務 | `$ARGUMENTS` に「レセコン」「診療報酬」「点数算定」「レセプト」「医事」「算定要件」「施設基準」等のキーワードを検出、または明示指定 |
+| 役 | subagent_type | 追加条件 |
+|---|---|---|
+| ehr | `japan-ehr-specialist` | 「電子カルテ」「EHR」「診療録」「SS-MIX」「FHIR」「医療情報」「電子処方箋」「PHR」等を検出、または明示指定 |
+| receipt | `japan-receipt-computer-specialist` | 「レセコン」「診療報酬」「点数算定」「レセプト」「医事」「算定要件」「施設基準」等を検出、または明示指定 |
 
-医療ドメインが対象の場合、両専門家は**委譲ルール**（法令・標準規格は ehr、点数・算定は receipt）で役割が分かれる設計になっているため、両方同時にチーム入りさせることが多い。
-
-$ARGUMENTS にチーム構成の指定（追加・除外）があれば反映する。指定が無く、ドメインキーワードも検出されない場合はデフォルト 5 人で進める。
+医療ドメインでは法令・規格は ehr、点数・算定は receipt の委譲ルールで役割が分かれる。両方同時に呼ぶことが多い。最終 critic の後に 1 往復だけドメインチェックを挟む（ステップ 6.5）。
 
 ---
 
-## フェーズ 1: エージェントチーム起動
+## フェーズ 1: 単発 subagent の呼び出し契約
 
-### 1-1. Team コンテキストを先に作る（必須）
+すべての subagent 呼び出しは**単発 `Agent` tool**で行う。毎回必ず以下を守る。
 
-`Agent` を `team_name` 付きで呼ぶ前に、**必ず先に** `TeamCreate` で team コンテキストを作成する。
-これを飛ばすと `Not in a team context. Create a team with Teammate spawnTeam first, or set CLAUDE_CODE_TEAM_NAME.` で失敗する。
+### 呼び出し時
 
-```
-TeamCreate({
-  team_name: "spec-planner-plan-<slug>",
-  description: "spec-planner-plan: <設計対象>"
-})
-```
+- `subagent_type`: 上表のいずれか
+- `description`: 3〜5 語の動作説明（例: "architect: design.md initial draft"）
+- `prompt`: 下記「prompt に毎回含める項目」を充足すること。本質的に不要なコンテキストは渡さない
+- 並列化は**しない**（このスキルは逐次が前提。独立フェーズは存在しない）
+- `model`: トークン削減のため役割ごとに明示的に指定する（agent 定義側の `model: inherit` を上書き）:
+  - **`"opus"`**: architect（ステップ 2 / 7）、最終 critic（ステップ 6）。深い設計判断と横断レビューが必要
+  - **`"sonnet"`**: analyst（ステップ 1 / 7）、modeler（ステップ 4 / 7）、軽量 critic（ステップ 3 / 5）、scribe（ステップ 8）、ehr / receipt（ステップ 6.5）。作業寄り・定型寄りで Sonnet で十分品質が出る
+  - どちらか迷ったら Sonnet を試す。blocker が多発する傾向があれば当該ステップだけ Opus に上げる
 
-team_name は kebab-case（先頭は英字、英数字とハイフンのみ）。`<slug>` はフェーズ 0-2 と同じ値を使う。
+### prompt に毎回含める項目
 
-### 1-2. チームメンバーを並列生成
-
-`TeamCreate` 成功後、**同一メッセージ内で**（並列に）0-3 で確定したメンバー数ぶんの `Agent` tool を呼ぶ。各呼び出しには以下を必ず指定する:
-
-- `subagent_type`: 既定 5 人は `spec-planner-architect` / `spec-planner-modeler` / `spec-planner-requirements-analyst` / `spec-planner-critic` / `spec-planner-scribe`。ドメイン専門家は `japan-ehr-specialist` / `japan-receipt-computer-specialist`
-- `name`: `architect` / `modeler` / `analyst` / `critic` / `scribe` / `ehr` / `receipt`（SendMessage の宛先になる）
-- `team_name`: 1-1 で作成した team_name（**省略厳禁**）
-- `description`: 短い役割説明
-- `prompt`: 下記の初期プロンプト
-
-ドメイン専門家を追加した場合は、他メンバーへの初期プロンプトにも**専門家の存在と委譲ルール**を明記する（医療系の法令・規格質問は `ehr` に、点数・算定は `receipt` に振る）。
-
-### 1-3. 初期プロンプトに必ず含める項目
-
-1. **対象の要求仕様**（$ARGUMENTS の本文全文）
-2. **作業ディレクトリの絶対パス**: `./spec-planner-output/<slug>/`
-3. **team_name**（他メンバーへの SendMessage で使用）と**自分の name**、**他メンバーの name 一覧**
-4. **各ファイルの役割と役割別必読リスト**:
-   - `design.md`: アーキテクチャ・モジュール構成・主要設計判断・非機能要件への対応
-   - `data-model.md`: **テーブル定義と ER 図の一次情報**。冒頭に ER 図、以下にテーブル単位で役割・スキーマを簡潔に記述
-   - `requirements-mapping.md`: 要求 ↔ 設計の対応表
-   - `usecases.md`: ユースケースごとの入出力・状態遷移・データフロー
-   - `open-issues.md`: 未決事項・持ち越し論点
-   - `minutes.md`: 初回設計時のラウンド議事録（`spec-planner-revise` では触らない）
-   - `revision-history.md`: 改訂履歴（`spec-planner-revise` が使用）
-
-   **各メンバーは**初回に自分の担当ファイルのみ通読すればよい（全員全読みはしない）:
-   - architect: `requirements-mapping.md` / `design.md` / `open-issues.md`
-   - modeler: `requirements-mapping.md` / `data-model.md` / `usecases.md` / `design.md` の該当節
-   - analyst: `requirements-mapping.md` / 要求仕様本文 / `open-issues.md`
-   - critic: 該当ラウンドでリーダーから broadcast される差分サマリ + `open-issues.md`
-   - scribe: 全ファイル（整合チェックのため最終ラウンドは全読み、各ラウンド中は差分のみ）
-   - ehr / receipt: 自分に振られた質問文と、その質問が指す成果物の該当節のみ
-
-   **2 ラウンド目以降**はリーダーが broadcast する「差分サマリ」だけ読む。他ファイルは自分の作業に必要なときだけ Read する。
-5. **設計原則**（必ず転記）:
+1. **モード宣言**: 「単発実行。このセッション内で完結させる。作業後に ~200 tokens のサマリだけ返す」
+2. **作業ディレクトリ絶対パス**: `./spec-planner-output/<slug>/` を絶対パス化したもの
+3. **今回の担当範囲**: 対象ファイルと対象セクション（全体書き換えではなく該当箇所に限定）
+4. **読んでよいファイル**: 当該 subagent の担当ファイル + `task-state.md`。その他のファイルは**offset/limit 指定で必要箇所だけ** Read してよい（全文 Read 禁止）
+5. **書くべき成果物**: どのファイルのどのセクションを Write/Edit するか具体指示
+6. **戻り値フォーマット**（厳守）:
+   ```
+   wrote: <相対パス>[, <相対パス>...]
+   summary: <1 行・80 文字以内>
+   findings_count: <critic のみ。blocker=N major=M minor=K の形式>
+   ```
+   議論文・根拠説明・代替案列挙をメインに返さない。詳細はファイルに書く。
+7. **設計原則**（必ず転記）:
    - 要求を満たす最小の設計を第一候補とする
    - ただしシンプルすぎて負債が溜まる設計は却下する
    - 判断は常に「なぜ」とセットで残す
-   - 他メンバーに対して合理的かつ厳しく批判する
+   - 他メンバーの成果物は合理的かつ厳しく批判する（critic のみ）
    - 合意なき妥協をしない。反駁されたら認める
-6. **文書品質原則**（必ず転記、成果物を書くときに厳守）:
+8. **文書品質原則**（必ず転記、成果物を書くときに厳守）:
    - **読み手はこのシステムを既に知る熟練エンジニア**。背景説明・用語定義・一般論は書かない
-   - **箇条書きは本当に列挙可能な離散項目のみ**。設計判断の理由・経緯・トレードオフは**散文**で書く（箇条書きは読みづらい）
+   - **箇条書きは本当に列挙可能な離散項目のみ**。設計判断の理由・経緯・トレードオフは**散文**で書く
    - **採用した決定と、却下した代替案を却下理由とともに書く**。両論併記やトレードオフの羅列は禁止
    - **抽象語単独禁止**。「スケーラブル」「堅牢」「高性能」等は、具体的な数値・メカニズム・具体例を添えなければ書かない
-   - 初稿完成後に scribe が「30% 削減・情報密度向上」パスを行う（フェーズ 3 で実施）
-7. **ラウンド制**: ラウンド数は**固定しない**。critic（および参加していればドメイン専門家）の重大指摘が尽きるまで継続。各ラウンドの目的はリーダー（=あなた）が宣言する
-8. **対話の自由**: メンバー同士は SendMessage で直接対話してよい（宛先は name）
+   - 初稿完成後に scribe が「30% 削減・情報密度向上」パスを行う（ステップ 8）
 
-## フェーズ 2: ラウンド進行
+### critic 専用の追加契約
 
-**ラウンド数は固定しない**。critic（およびドメイン専門家が参加している場合はその専門家）の**重大指摘が尽きるまで**継続する。最低 1 ラウンドは必ず実施する。
+- 議論文・根拠文をメインに返さない。`critic-findings.md` に表形式で追記する
+- 各指摘に `severity = blocker | major | minor` を必ず付ける
+- `blocker` は「要求未充足・整合性崩壊・データ損失・法令違反など、採用不可級の欠陥」に限定する
+- 戻り値の `findings_count` は当該ラウンドで追加した件数。以前のラウンド分は含めない
 
-**各ラウンドの最低構成**:
+---
 
-1. リーダーがラウンド番号と目的、**前ラウンドからの差分サマリ**をチームに broadcast（2 ラウンド目以降）
-2. 担当メンバーがドラフトを書く。**独立な作業（例: architect のモジュール分割と modeler のデータモデル）は、リーダーが同一メッセージで並列 SendMessage し、逐次にしない**
-3. critic が批判的論点を提起（ゼロ提起は許されない。無ければリーダーが観点を指示して再検討させる）
-4. 全論点が解消（または open-issues 行き）するまで対話
-5. scribe が `minutes.md` にそのラウンドの記録を追記（論点→結論の形式、議論過程の逐語は避ける）
-6. リーダーが次ラウンドの要否を判断:
-   - **継続**: critic（またはドメイン専門家）が新たな重大論点を提起した / 未解消の論点が残っている / 要求に追加が発生した
-   - **終了**: critic が「重大な指摘なし」と明示的に合意し、全メンバーがドラフトに異議なし、`open-issues.md` に残る項目は全て低重要度または合意済み
+## フェーズ 2: 逐次フロー（needs-revise ループ込み）
 
-**ラウンド目的のガイド**（リーダーが各ラウンド冒頭で宣言する。以下は典型例で、順序や要否は対象に応じて調整する）:
+各ステップ完了時にメインは `task-state.md` の `Current Phase` / `Next Action` / `Completed Steps` を 1 回 Edit する。ユーザーへの報告は各ステップ後の 1 行サマリのみ。
 
-- 要求分解とスコープ確定、ラフな全体構造（analyst + architect）
-- データモデル初版と主要ユースケースの列挙（modeler）
-- 批判的レビューとモジュール境界の再検討（critic + architect）
-- 要求対応表のギャップ埋めと未対応要求の解決（analyst）
-- 非機能・運用・障害シナリオの検証（critic + modeler）
-- open-issues の集中解消、必要なら再モデリング（全員）
+### ステップ 1: analyst（単発）
 
-**暴走防止**: 同一論点で 2 ラウンド連続して合意に至らない場合、その論点は `open-issues.md` に「未決」で移し、次ラウンドでは別論点に進む。リーダーが 10 ラウンドを超えそうと判断した時点でユーザーに中間報告し、継続可否を確認する。
+- 目的: `requirements-mapping.md` 初版、要求分解と未対応要求の洗い出し
+- prompt 固有事項: `$ARGUMENTS` の要求本文全文 + 作業ディレクトリ
+- 戻り値後: `task-state.md` を更新、`Completed Steps` の `analyst` にチェック
 
-### ラウンド間で必ず確認
+### ステップ 2: architect（単発）
 
-- [ ] `requirements-mapping.md` の未対応要求数が減っているか
-- [ ] `open-issues.md` に今回の議論で新しく浮上した点が追加されたか
-- [ ] `design.md` / `data-model.md` / `usecases.md` の更新理由が `minutes.md` に紐づくか
-- [ ] `data-model.md` の ER 図とテーブル一覧が `design.md` の設計判断と矛盾していないか
-- [ ] 成果物間で用語・ID・テーブル名・カラム名が一致しているか（scribe にチェックさせる）
+- 目的: `design.md` / `open-issues.md` 初版。モジュール境界・主要設計判断
+- prompt 固有事項: `requirements-mapping.md` は Read 可、`design.md` 本文を Write
+- 戻り値後: `task-state.md` を更新
 
-## フェーズ 3: 最終統合
+### ステップ 3: 軽量 critic 1（単発）
 
-最終ラウンド後、scribe に以下を**順に**依頼:
+- 目的: architect 成果物への 1 往復レビュー。**design.md / open-issues.md のみが対象**
+- prompt 固有事項: 「軽量レビュー（1 往復・最大 15 件）。severity タグ必須。blocker は要求未充足・整合性崩壊級のみ」
+- 書き込み: `critic-findings.md` の `## Round 1 (preliminary-architect)` セクション
+- 戻り値後: `findings_count` から blocker 数を `task-state.md` に反映
 
-1. **整合チェック**: 全成果物を通読し、用語・参照・矛盾を最終チェック
-2. **30% 削減パス**: `design.md` / `usecases.md` / `requirements-mapping.md` を対象に、**情報密度を上げて最低 30% 行数を削減する**（`data-model.md` はもともと簡潔志向なので、重複があれば整理する程度）。具体的には:
-   - 同じ内容を別の言い方で書いている箇所を統合する
-   - 自明な説明・冗長な前置き・目次の水増しを削除する
-   - 箇条書きを散文に書き換える（本当に列挙可能な離散項目は残す）
-   - 抽象語単独の記述は、具体化するか削除する
+**needs-revise ゲート**:
+- `blocker == 0` → ステップ 4 へ
+- `blocker > 0` → architect を再度単発呼び出し。prompt に「`critic-findings.md` の Round 1 (preliminary-architect) の blocker 行のみ対応し、resolved に書き換える。major/minor は今回触らない」を明示。再度このステップ 3 へ戻り、critic は同じ Round セクションに再評価を追記（見出しは `## Round 1 (preliminary-architect, retry N)`）。blocker ゼロになるまで最大 2 回リトライ。それでも残る場合はユーザーに中間報告して継続可否を問う
+
+### ステップ 4: modeler（単発）
+
+- 目的: `data-model.md` / `usecases.md` 初版。ER 図・テーブル定義・ユースケースの入出力と状態遷移
+- prompt 固有事項: `design.md` の該当節と `requirements-mapping.md` を offset/limit で Read 可
+- 戻り値後: `task-state.md` を更新
+
+### ステップ 5: 軽量 critic 2（単発）
+
+- 目的: modeler 成果物への 1 往復レビュー。**data-model.md / usecases.md のみが対象**
+- 書き込み: `critic-findings.md` の `## Round 2 (preliminary-modeler)` セクション
+- needs-revise ゲート: ステップ 3 と同じ仕組み。blocker > 0 なら modeler を再呼び出し、最大 2 リトライ
+
+### ステップ 6: 最終 critic（単発・厚め）
+
+- 目的: 全成果物を横断した最終レビュー。blocker / major / minor を洗い出し
+- prompt 固有事項: 「厚めレビュー。全成果物を offset/limit で必要部分だけ Read。要求網羅・整合性・非機能・障害シナリオ・運用観点を一通り確認。severity タグ必須」
+- 書き込み: `critic-findings.md` の `## Round 3 (final)` セクション
+
+### ステップ 6.5: ドメイン専門家チェック（条件付き・単発）
+
+- 条件: ehr / receipt を 0-2 で追加している場合のみ
+- 目的: 法令・規格・点数・算定観点での最終確認（1 往復）
+- 書き込み: 指摘は `critic-findings.md` に `## Round 3.5 (domain-ehr)` / `(domain-receipt)` セクションで追記。severity タグは同じ基準
+- blocker が増えた場合は次の needs-revise ループ（ステップ 7）に合流
+
+### ステップ 7: needs-revise ループ
+
+最終 critic（+ ドメイン専門家）が出した blocker を、ファイル担当者に配分して解消する:
+
+- `design.md` / `open-issues.md` の blocker → architect を単発呼び出し（対象セクションと `critic-findings.md` の該当行を prompt に明示、該当行のみ resolved に更新させる）
+- `data-model.md` / `usecases.md` の blocker → modeler を単発呼び出し
+- `requirements-mapping.md` の blocker → analyst を単発呼び出し
+- 複数ファイルに跨る blocker は、ファイルごとに分けて該当担当者を順に呼ぶ
+
+全 blocker の status を `resolved` にしたら、再度**最終 critic を単発呼び出し**して残存 blocker を確認（`## Round 3 (final, retry N)`）。blocker ゼロが確認できるまで繰り返す。
+
+- `major` / `minor` は今ループでは触らない。scribe の最終統合（ステップ 8）でまとめて処理させる（体裁・冗長は minor、設計品質の軽微な改善は major として対応）
+- 同じ論点で 2 ループ連続して blocker ゼロに至らない場合は、その指摘を `deferred` にして `open-issues.md` に移送（理由と影響を明記）し、当該ループを閉じる
+- 8 ループを超えそうと判断した時点でユーザーに中間報告し、継続可否を確認
+
+### ステップ 8: scribe（単発・最終統合）
+
+blocker ゼロ確定後に 1 回だけ起動する。prompt には以下を順に指示:
+
+1. **整合チェック**: 全成果物を offset/limit で走査し、用語・ID・テーブル名・カラム名・参照の一致を確認。不整合は直接 Edit で直す
+2. **30% 削減パス**: `design.md` / `usecases.md` / `requirements-mapping.md` の情報密度を上げて最低 30% 行数削減:
+   - 同じ内容を別の言い方で書いている箇所を統合
+   - 自明な説明・冗長な前置き・目次の水増しを削除
+   - 箇条書きを散文に書き換え（本当に列挙可能な離散項目は残す）
+   - 抽象語単独の記述は具体化するか削除
    - 両論併記は採用決定＋却下理由の形に書き換える
-3. **冒頭整備**: `design.md` 冒頭の「目的とスコープ」は、**既にシステムを知る熟練エンジニア**を読み手と想定して最短で意図が伝わる形に整える。背景説明は書かない
-4. **議事録まとめ**: `minutes.md` 末尾に「最終まとめ」を追記
-5. **未決整理**: `open-issues.md` を重要度順にソートし、放置した場合の影響を全項目に記載
+   - `data-model.md` はもともと簡潔志向。重複整理程度
+3. **冒頭整備**: `design.md` 冒頭「目的とスコープ」を、既にシステムを知る熟練エンジニア向けに最短化。背景説明は書かない
+4. **critic-findings の major/minor 反映**: `critic-findings.md` の major/minor 指摘のうち採用するものを各ファイルに反映し、status を `resolved` に更新
+5. **議事録作成**: `minutes.md` に各ラウンドの論点→結論を簡潔追記（逐語は不要。critic-findings の要約と needs-revise ループの結論を中心に）
+6. **未決整理**: `open-issues.md` を重要度順にソートし、全項目に「放置した場合の影響」を記載
 
-仕上がりの文書品質基準（scribe に厳守させる）:
+scribe の戻り値も `wrote: ..., summary: ...` 形式で 200 tokens 以内。
 
-- **読み手はこのシステムを既に知る熟練エンジニア**。背景説明・用語定義・一般論は書かない
-- 箇条書きは列挙可能な離散項目のみ。設計判断の理由・経緯は散文
-- 決定とその却下理由のみ記述。両論併記・トレードオフの羅列は禁止
-- 「スケーラブル」「堅牢」等の抽象語は必ず数値・メカニズム・具体例を伴う
-- 「目的 → 前提 → 結論 → 根拠 → 詳細 → 未決事項」の論理順
-- 記述は最小、情報量は最大（冗長な前置き・自明な説明・目次の水増しなし）
+## フェーズ 3: 報告
 
-## フェーズ 4: クリーンアップと報告
+scribe 完了後、ユーザーに以下を 1 メッセージで報告:
 
-1. 各メンバーに `SendMessage({to: "<name>", message: {type: "shutdown_request"}})` でシャットダウンを依頼
-2. 全員のアイドル/停止を確認したら `TeamDelete` を呼んで team リソースを削除
-   - `TeamDelete` はアクティブメンバーが残っているとエラーになる。その場合は再度シャットダウンを送る
-3. ユーザーに以下を報告:
-   - 作業ディレクトリの絶対パス
-   - 実行ラウンド数
-   - 成果物 5 本のそれぞれ何ラインか
-   - `open-issues.md` の未決事項件数
-   - 特に注目すべき判断・論点を 3 件以内
+- 作業ディレクトリの絶対パス
+- 実行した needs-revise ループ回数（ステップ 7 のループ回数）
+- 成果物（design.md / data-model.md / requirements-mapping.md / usecases.md / open-issues.md / minutes.md）それぞれの行数
+- `open-issues.md` の未決件数、`critic-findings.md` で `deferred` に回った件数
+- 特に注目すべき判断・論点を 3 件以内
 
 ---
 
 ## 運営上の厳守事項
 
-- **合意なき妥協をしない**: 議論ポイントは解消まで続ける。解消できないものは `open-issues.md` に明示（放置しない）。
-- **沈黙を許さない**: critic が 1 ラウンドで新しい指摘ゼロなら、リーダーが観点を指示して再検討させる。
-- **成果物は毎ラウンド更新**: 議論だけで終わらせない。ファイルに反映させて初めてそのラウンドを閉じる。
-- **並列性を活かす**: 独立な作業指示は**同一メッセージで複数 SendMessage** を並べる。逐次化はトークンと壁時間の無駄。レビュー依頼も、受け手が独立に判断できるなら並列化する。
-- **ファイル読みは最小限**: 各メンバーは主担当ファイル以外を毎ラウンド読まない。リーダーの差分サマリで足りるよう運営する。
-- **ユーザーには中間報告を最小限に**: 各ラウンド完了時に 1〜2 行のサマリだけ出す。詳細はすべてファイルに。
-- **$ARGUMENTS に要求仕様の本文が薄い場合**: 即座に止めて、具体の要求を問う。推測で進めない。
+- **戻り値最小化**: 各 subagent の戻り値は `wrote: / summary: / findings_count:` 形式で最大 200 tokens。議論文・根拠・代替案をメインに返させない。詳細はすべてファイルに書く
+- **ファイル全文 Read 禁止**: メインも subagent も、必要なセクションだけ offset/limit で Read する。全文通読が必要なのは scribe の整合チェック時のみ
+- **Agent-Team を使わない**: `TeamCreate` / `SendMessage` / `TeamDelete` を呼ばない。subagent は毎回新規 `Agent` 呼び出しで使い捨て
+- **状態はファイルに**: ラウンド番号・blocker 残数・次アクションは `task-state.md` / `critic-findings.md` に書く。メインのコンテキストに累積させない
+- **needs-revise は blocker ゼロで閉じる**: major/minor の残存は scribe 最終統合で処理。最終 critic で blocker ゼロを明示確認してからステップ 8 へ進む
+- **沈黙を許さない**: critic の `findings_count` が `blocker=0 major=0 minor=0` の場合は、プロンプトに観点（例: 障害シナリオ・非機能・運用）を具体的に指示して 1 回だけ再依頼する。それでも沈黙なら「重大な指摘なし」として確定
+- **暴走防止**: 同一指摘で 2 ループ連続解消しない場合は `deferred` → `open-issues.md` 行き。8 ループ超えそうならユーザー確認
+- **$ARGUMENTS に要求仕様の本文が薄い場合**: 即座に止めて、具体の要求を問う。推測で進めない
 
 ## 参照
 
-- [Agent Teams docs](https://code.claude.com/docs/ja/agent-teams)
-- subagent 定義: `~/.claude/agents/spec-planner-*.md`
+- subagent 定義（変更なし・読み取りのみ）:
+  - `~/.claude/agents/spec-planner-architect.md`
+  - `~/.claude/agents/spec-planner-modeler.md`
+  - `~/.claude/agents/spec-planner-requirements-analyst.md`
+  - `~/.claude/agents/spec-planner-critic.md`
+  - `~/.claude/agents/spec-planner-scribe.md`
+  - `~/.claude/agents/japan-ehr-specialist.md`
+  - `~/.claude/agents/japan-receipt-computer-specialist.md`
 - 出力テンプレート: `~/.claude/skills/spec-planner-plan/templates/`
