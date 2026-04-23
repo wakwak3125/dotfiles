@@ -9,6 +9,8 @@ macOS / Linux 両対応の dotfiles リポジトリ。
 
 ```
 dotfiles/
+├── claude/           # Claude Code 関連 (~/.claude/ 配下に symlink)
+│   └── skills/       # 個人 skills (spec-planner-plan, spec-planner-revise 等)
 ├── config/           # XDG_CONFIG_HOME 配下の設定
 │   ├── git/ignore    # グローバル gitignore
 │   ├── karabiner/    # Karabiner-Elements 設定 (macOS)

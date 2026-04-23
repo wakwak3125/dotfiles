@@ -77,6 +77,17 @@ fi
 
 ln -sfv $ROOT/config/git/ignore $HOME/.config/git/ignore
 
+# Claude Code 個人 skills
+if [ ! -d ~/.claude ]; then
+  mkdir -p ~/.claude
+  echo '~/.claude was created'
+fi
+
+if [ ! -L ~/.claude/skills ]; then
+  rm -rf ~/.claude/skills
+fi
+ln -sfv $ROOT/claude/skills $HOME/.claude/skills
+
 if [ ! -d ~/.config/zed ]; then
   mkdir -p ~/.config/zed
   echo '~/.config/zed was created'
