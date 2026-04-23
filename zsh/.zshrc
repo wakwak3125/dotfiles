@@ -11,12 +11,6 @@ eval "$(~/.local/bin/mise activate zsh)"
 eval "$(direnv hook zsh)"
 export JAVA_HOME="$(mise where java)"
 
-## Claude
-export CLAUDE_CODE_NO_FLICKER=1
-export CLAUDE_CODE_DISABLE_1M_CONTEXT=0
-export CLAUDE_AUTOCOMPACT_PCT_OVERRIDE=80
-export CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1
-
 source $ZDOTDIR/.zshrc_local
 
 bindkey -e
