@@ -18,6 +18,11 @@
     "dockerfile": true
   },
   "languages": {
+    "Markdown": {
+      "indent_guides": {
+        "active_line_width": 1
+      }
+    },
     "Kotlin": {
       "language_servers": ["kotlin-language-server"]
     }
