@@ -28,9 +28,10 @@ $ROOT/script/install-neovim.sh
 # ================================================
 ln -sfv $ROOT/ideavimrc $HOME/.ideavimrc
 ln -sfv $ROOT/obsidian.vimrc $HOME/.obsidian.vimrc
-ln -sfv $ROOT/zsh $HOME/.zsh
+# ディレクトリ向け symlink は -n を付けないと既存 link を辿って中にネストを作る
+ln -sfnv $ROOT/zsh $HOME/.zsh
 ln -sfv $ROOT/zshenv $HOME/.zshenv
-ln -sfv $ROOT/nvim $HOME/.config/nvim
+ln -sfnv $ROOT/nvim $HOME/.config/nvim
 
 if [ ! -d ~/.config/tmux ]; then
   mkdir -p ~/.config/tmux
