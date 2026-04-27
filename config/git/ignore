@@ -15,3 +15,5 @@ worktrees/**
 .browser-agent
 .forge-workspace
 spec-planner-output/
+.forge/
+
