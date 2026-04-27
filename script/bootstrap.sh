@@ -83,10 +83,17 @@ if [ ! -d ~/.claude ]; then
   echo '~/.claude was created'
 fi
 
+# `-n` を付けないと既存の symlink を辿って中にリンクを作ってしまう
 if [ ! -L ~/.claude/skills ]; then
   rm -rf ~/.claude/skills
 fi
-ln -sfv $ROOT/claude/skills $HOME/.claude/skills
+ln -sfnv $ROOT/claude/skills $HOME/.claude/skills
+
+# Claude Code 個人 agents
+if [ ! -L ~/.claude/agents ]; then
+  rm -rf ~/.claude/agents
+fi
+ln -sfnv $ROOT/claude/agents $HOME/.claude/agents
 
 if [ ! -d ~/.config/zed ]; then
   mkdir -p ~/.config/zed
