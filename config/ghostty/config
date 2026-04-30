@@ -1,0 +1,2 @@
+# ベル通知を無効化 (タブ/ウィンドウのベルアイコン・dock 跳ね・タイトル絵文字を抑止)
+bell-features = no-system,no-audio,no-attention,no-title,no-border
