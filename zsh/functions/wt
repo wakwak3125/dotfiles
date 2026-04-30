@@ -243,26 +243,136 @@ case "$cmd" in
     done < <(git branch -vv | grep ': gone]' | sed 's/^[* +]*//' | awk '{print $1}' | grep -v -E "^(main|master|develop)$")
 
     if (( ${#delete_targets[@]} > 0 )); then
-      echo "不要ブランチを削除中..."
-      for branch in "${delete_targets[@]}"; do
-        local wt_for_branch="${branch_wt_map[$branch]}"
-        if [[ -n "$wt_for_branch" && -d "$wt_for_branch" ]]; then
-          # tmux window を閉じる（silent モードではスキップ）
-          if [[ "$silent" != true ]] && [[ "$in_tmux" == true ]] && tmux has-session -t "$tmux_session" 2>/dev/null; then
-            local wt_dir_name=$(basename "$wt_for_branch")
-            tmux kill-window -t "$tmux_session:$wt_dir_name" 2>/dev/null
-          fi
-          # worktree を削除（未コミット変更があれば拒否される）
-          if git worktree remove "$wt_for_branch" 2>/dev/null; then
-            echo "  worktree 削除: $wt_for_branch"
-          else
-            echo "  スキップ（未コミット変更あり）: $wt_for_branch" >&2
-            continue
-          fi
+      # 関数スコープで job 通知を抑止（[N] PID / [N] done のログを止める）
+      setopt local_options no_monitor no_notify
+
+      local total=${#delete_targets[@]}
+      local jobs_max=${WT_CLEAN_JOBS:-4}
+      local is_tty=false
+      [[ -t 2 ]] && is_tty=true
+
+      # 進捗表示用 FIFO（バックグラウンドジョブからのイベントを集約）
+      local progress_fifo=$(mktemp -u)
+      mkfifo "$progress_fifo"
+
+      # 進捗表示プロセス（バックグラウンド）
+      # プロトコル: "START<TAB>branch" / "END<TAB>OK|SKIP|FAIL<TAB>branch"
+      {
+        local -A inflight
+        local done_count=0
+        local -a results
+        local CR=$'\r' CLR=$'\033[K'
+        if [[ "$is_tty" != true ]]; then
+          CR=""
+          CLR=""
         fi
-        git branch -d "$branch" 2>/dev/null || git branch -D "$branch" 2>/dev/null
-        echo "  ブランチ削除: $branch"
+
+        _redraw() {
+          if [[ "$is_tty" == true ]]; then
+            local list="${(j:, :)${(k)inflight}}"
+            [[ -z "$list" ]] && list="(待機中)"
+            printf "%s%s  [%d/%d] 処理中: %s" "$CR" "$CLR" "$done_count" "$total" "$list" >&2
+          fi
+        }
+
+        while IFS=$'\t' read -r kind status branch; do
+          case "$kind" in
+            START)
+              inflight[$status]=1   # status 列が branch 名（START の場合）
+              _redraw
+              ;;
+            END)
+              done_count=$((done_count + 1))
+              unset "inflight[$branch]"
+              case "$status" in
+                OK)   results+=("  ✓ $branch") ;;
+                SKIP) results+=("  - スキップ（未コミット変更あり）: $branch") ;;
+                FAIL) results+=("  ✗ ブランチ削除失敗: $branch") ;;
+              esac
+              _redraw
+              ;;
+          esac
+        done < "$progress_fifo"
+
+        # 最終行をクリアしてサマリを出力
+        if [[ "$is_tty" == true ]]; then
+          printf "%s%s" "$CR" "$CLR" >&2
+        fi
+        printf "%s\n" "${results[@]}" >&2
+      } &
+      local progress_pid=$!
+
+      # FIFO 書き込み側を親で開いておく（read 側が EOF を取らないように）
+      exec 9>"$progress_fifo"
+
+      # クリーンアップ（冪等: 何度呼んでも安全）
+      local _wt_clean_done=false
+      _wt_clean_cleanup() {
+        [[ "$_wt_clean_done" == true ]] && return
+        _wt_clean_done=true
+        # FIFO の write 側を閉じて進捗 reader に EOF を送る
+        exec 9>&- 2>/dev/null
+        # 残ってる子ジョブ（worker / progress reader）を終了
+        local pid
+        for pid in ${(k)jobstates}; do
+          kill -TERM "$pid" 2>/dev/null
+        done
+        wait 2>/dev/null
+        rm -f "$progress_fifo"
+      }
+      # INT/TERM: cleanup + 中断メッセージ + 130 で return
+      trap '_wt_clean_cleanup; printf "\n中断しました\n" >&2; return 130' INT TERM
+      # EXIT: 関数終了時に必ず cleanup（正常終了でも保険として走る）
+      trap '_wt_clean_cleanup' EXIT
+
+      # 並列ジョブ管理
+      local running=0
+      for branch in "${delete_targets[@]}"; do
+        # 並列数の上限に達したら 1 つ終わるのを待つ
+        while (( running >= jobs_max )); do
+          wait -n 2>/dev/null
+          running=$((running - 1))
+        done
+
+        local wt_for_branch="${branch_wt_map[$branch]}"
+        local wt_dir_name=""
+        [[ -n "$wt_for_branch" ]] && wt_dir_name=$(basename "$wt_for_branch")
+
+        # tmux window を閉じる（前段で順次実行: tmux IPC は並列の意味なし）
+        if [[ -n "$wt_dir_name" ]] && [[ "$silent" != true ]] && [[ "$in_tmux" == true ]] \
+            && tmux has-session -t "$tmux_session" 2>/dev/null; then
+          tmux kill-window -t "$tmux_session:$wt_dir_name" 2>/dev/null
+        fi
+
+        # 削除処理をバックグラウンドで実行
+        {
+          print -u 9 -r -- "START	$branch"
+          if [[ -n "$wt_for_branch" && -d "$wt_for_branch" ]]; then
+            if ! git worktree remove "$wt_for_branch" >/dev/null 2>&1; then
+              print -u 9 -r -- "END	SKIP	$branch"
+              exit 0
+            fi
+          fi
+          if git branch -d "$branch" >/dev/null 2>&1 || git branch -D "$branch" >/dev/null 2>&1; then
+            print -u 9 -r -- "END	OK	$branch"
+          else
+            print -u 9 -r -- "END	FAIL	$branch"
+          fi
+        } &
+        running=$((running + 1))
       done
+
+      # 残りのワーカーを待機（progress reader は cleanup で終了させる）
+      while (( running > 0 )); do
+        wait -n 2>/dev/null
+        running=$((running - 1))
+      done
+
+      # 正常終了パスでも cleanup を走らせる（FIFO 閉じる→reader 終了→FIFO 削除）
+      _wt_clean_cleanup
+      # trap を解除して関数を破棄
+      trap - INT TERM EXIT
+      unset -f _wt_clean_cleanup
     else
       echo "削除対象のブランチはありません"
     fi
