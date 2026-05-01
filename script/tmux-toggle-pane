@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+# tmux-toggle-pane: 名前付きスクラッチペインを画面下部にトグル表示する
+#
+# 使い方:
+#   tmux-toggle-pane <name> [-h <height>] -- <command...>
+#   tmux-toggle-pane <name> <command...>             # height 既定 (40%)
+#
+# 同名のペインが既に存在する場合は閉じ、無ければ split-window -v で開く。
+
+set -euo pipefail
+
+NAME="$1"
+shift
+
+HEIGHT="40%"
+if [[ "${1:-}" == "-h" ]]; then
+  HEIGHT="$2"
+  shift 2
+fi
+if [[ "${1:-}" == "--" ]]; then
+  shift
+fi
+
+OPT_NAME="@toggle_pane_${NAME}"
+EXISTING=$(tmux show-option -gv "$OPT_NAME" 2>/dev/null || true)
+
+if [[ -n "$EXISTING" ]] && tmux list-panes -a -F '#{pane_id}' 2>/dev/null | grep -qx "$EXISTING"; then
+  tmux kill-pane -t "$EXISTING"
+  tmux set-option -gu "$OPT_NAME" >/dev/null 2>&1 || true
+  exit 0
+fi
+
+PANE_ID=$(tmux split-window -v -l "$HEIGHT" -P -F '#{pane_id}' -c "#{pane_current_path}" "$@")
+tmux set-option -g "$OPT_NAME" "$PANE_ID" >/dev/null

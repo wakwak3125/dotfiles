@@ -37,15 +37,14 @@ preview_cmd='
 
 selected=$(printf '%s\n' "$branches" | fzf \
   --reverse \
-  --border=rounded \
-  --border-label=" Git Switch " \
+  --no-border \
   --header="current: ${current_branch:-detached}" \
   --header-first \
   --no-sort \
   --prompt="  " \
   --pointer="▶" \
   --bind="ctrl-k:kill-line" \
-  --color="border:green,label:green,header:dim" \
+  --color="header:dim" \
   --preview="$preview_cmd" \
   --preview-window="down,60%,border-top" \
 ) || exit 0

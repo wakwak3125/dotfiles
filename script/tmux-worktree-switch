@@ -1,0 +1,74 @@
+#!/usr/bin/env bash
+# tmux-worktree-switch: fzf を使った git worktree スイッチャー
+#
+# 現在のディレクトリが git 管理下なら、そのリポジトリの worktree のみを表示。
+# そうでなければ全 ghq リポジトリから worktree を収集する。
+# 選択した worktree に対応する tmux セッション/ウィンドウへ切り替える。
+
+set -euo pipefail
+
+if git rev-parse --is-inside-work-tree &>/dev/null; then
+  worktrees=$(git worktree list 2>/dev/null)
+else
+  if ! command -v ghq &>/dev/null; then
+    echo "ghq がインストールされていません"
+    read -r
+    exit 0
+  fi
+  worktrees=$(ghq list -p | while IFS= read -r repo; do
+    git -C "$repo" worktree list 2>/dev/null
+  done)
+fi
+
+if [[ -z "${worktrees:-}" ]]; then
+  echo "worktree がありません"
+  read -r
+  exit 0
+fi
+
+current_session=$(tmux display-message -p '#S' 2>/dev/null || echo "")
+
+preview_cmd='
+  path=$(echo {} | awk "{print \$1}")
+  echo -e "\033[1m$(basename "$path")\033[0m"
+  echo "$path"
+  echo ""
+  git -C "$path" log --oneline --graph --color=always -10 2>/dev/null || true
+'
+
+selected=$(printf '%s\n' "$worktrees" | fzf \
+  --reverse \
+  --no-border \
+  --header="session: ${current_session}" \
+  --header-first \
+  --no-sort \
+  --prompt="  " \
+  --pointer="▶" \
+  --bind="ctrl-k:kill-line" \
+  --color="header:dim" \
+  --preview="$preview_cmd" \
+  --preview-window="down,60%,border-top" \
+) || exit 0
+
+[[ -z "$selected" ]] && exit 0
+
+worktree_path=$(echo "$selected" | awk '{print $1}')
+
+window_name=$(git -C "$worktree_path" rev-parse --abbrev-ref HEAD 2>/dev/null || true)
+window_name="${window_name##*/}"
+[[ -z "$window_name" ]] && window_name=$(basename "$worktree_path" | tr '.' '_')
+
+repo_root=$(git -C "$worktree_path" worktree list 2>/dev/null | head -1 | awk '{print $1}')
+session_name=$(basename "$repo_root" | tr '.' '_')
+
+if tmux has-session -t "$session_name" 2>/dev/null; then
+  if tmux list-windows -t "$session_name" -F '#W' 2>/dev/null | grep -qxF "$window_name"; then
+    tmux switch-client -t "${session_name}:${window_name}"
+  else
+    tmux new-window -t "$session_name" -n "$window_name" -c "$worktree_path"
+    tmux switch-client -t "${session_name}:${window_name}"
+  fi
+else
+  tmux new-session -d -s "$session_name" -n "$window_name" -c "$worktree_path"
+  tmux switch-client -t "${session_name}:${window_name}"
+fi

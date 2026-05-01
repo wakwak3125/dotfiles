@@ -80,15 +80,14 @@ selected=$(printf '%s' "$formatted" | fzf \
   --with-nth=2.. \
   --nth=1,2 \
   --reverse \
-  --border=rounded \
-  --border-label=" Switch Window " \
+  --no-border \
   --header="$header" \
   --header-first \
   --no-sort \
   --prompt="  " \
   --pointer="▶" \
   --bind="ctrl-k:kill-line" \
-  --color="border:cyan,label:cyan,header:dim" \
+  --color="header:dim" \
   --preview="$preview_cmd" \
   --preview-window="down,60%,border-top" \
 ) || exit 0

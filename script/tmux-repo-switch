@@ -28,15 +28,14 @@ preview_cmd='
 
 selected=$(printf '%s\n' "$repos" | fzf \
   --reverse \
-  --border=rounded \
-  --border-label=" Switch Repository " \
+  --no-border \
   --header="session: ${current_session}" \
   --header-first \
   --no-sort \
   --prompt="  " \
   --pointer="▶" \
   --bind="ctrl-k:kill-line" \
-  --color="border:magenta,label:magenta,header:dim" \
+  --color="header:dim" \
   --preview="$preview_cmd" \
   --preview-window="down,60%,border-top" \
 ) || exit 0

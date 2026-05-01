@@ -46,7 +46,9 @@ ln -sfv $ROOT/script/claude-status $HOME/.local/bin/claude-status
 ln -sfv $ROOT/script/tmux-switcher $HOME/.local/bin/tmux-switcher
 ln -sfv $ROOT/script/tmux-git-switch $HOME/.local/bin/tmux-git-switch
 ln -sfv $ROOT/script/tmux-repo-switch $HOME/.local/bin/tmux-repo-switch
+ln -sfv $ROOT/script/tmux-worktree-switch $HOME/.local/bin/tmux-worktree-switch
 ln -sfv $ROOT/script/tmux-file-select $HOME/.local/bin/tmux-file-select
+ln -sfv $ROOT/script/tmux-toggle-pane $HOME/.local/bin/tmux-toggle-pane
 
 if [ ! -d ~/.config/alacritty ]; then
   mkdir -p ~/.config/alacritty

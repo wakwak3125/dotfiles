@@ -39,9 +39,9 @@ tree_browse() {
     local display_path="${current_dir/#$HOME/\~}"
 
     local dirs files
-    dirs=$(fd . "$current_dir" --max-depth 1 --type d --hidden --exclude '.git' 2>/dev/null | \
+    dirs=$(fd . "$current_dir" --max-depth 1 --type d --hidden --no-ignore --exclude '.git' 2>/dev/null | \
       sed "s|^${current_dir}/||; s|/$||" | grep -v '^$' | sort) || true
-    files=$(fd . "$current_dir" --max-depth 1 --type f --hidden --exclude '.git' 2>/dev/null | \
+    files=$(fd . "$current_dir" --max-depth 1 --type f --hidden --no-ignore --exclude '.git' 2>/dev/null | \
       sed "s|^${current_dir}/||; s|/$||" | grep -v '^$' | sort) || true
 
     local formatted=""
@@ -63,7 +63,7 @@ tree_browse() {
       item=$(echo {} | cut -f1)
       target="'"$current_dir"'/$item"
       if [[ -d "$target" ]]; then
-        fd . "$target" --max-depth 1 --hidden --exclude ".git" 2>/dev/null | sed "s|^$target/||" | head -30
+        fd . "$target" --max-depth 1 --hidden --no-ignore --exclude ".git" 2>/dev/null | sed "s|^$target/||" | head -30
       elif [[ -f "$target" ]]; then
         bat --color=always --style=numbers --line-range=:50 "$target" 2>/dev/null || head -50 "$target"
       fi
@@ -76,14 +76,13 @@ tree_browse() {
       --delimiter="$SEP" \
       --with-nth=2 \
       --reverse \
-      --border=rounded \
-      --border-label=" Tree: ${display_path} " \
-      --header="enter: 開く / ctrl-/: 検索モードへ" \
+      --no-border \
+      --header="Tree: ${display_path}  (enter: 開く / ctrl-/: 検索モードへ)" \
       --header-first \
       --no-sort \
       --prompt="  " \
       --pointer="▶" \
-      --color="border:green,label:green,header:dim" \
+      --color="header:dim" \
       --preview="$preview_cmd" \
       --preview-window="right,55%,border-left" \
       --bind="ctrl-/:execute-silent(echo search > '$SWITCH_FILE')+abort" \
@@ -137,15 +136,14 @@ search_mode() {
   echo -n "" > "$SWITCH_FILE"
 
   local selected
-  selected=$(fd --type f --hidden --exclude '.git' 2>/dev/null | fzf \
+  selected=$(fd --type f --hidden --no-ignore --exclude '.git' 2>/dev/null | fzf \
     --reverse \
-    --border=rounded \
-    --border-label=" Search Files " \
-    --header="enter: 選択 / tab: 複数選択 / ctrl-/: ツリーモードへ" \
+    --no-border \
+    --header="Search Files  (enter: 選択 / tab: 複数選択 / ctrl-/: ツリーモードへ)" \
     --header-first \
     --prompt="  " \
     --pointer="▶" \
-    --color="border:cyan,label:cyan,header:dim" \
+    --color="header:dim" \
     --preview="$preview_cmd" \
     --preview-window="right,55%,border-left" \
     --bind="ctrl-/:execute-silent(echo tree > '$SWITCH_FILE')+abort" \
