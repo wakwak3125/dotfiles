@@ -1,2 +1,12 @@
 # ベル通知を無効化 (タブ/ウィンドウのベルアイコン・dock 跳ね・タイトル絵文字を抑止)
 bell-features = no-system,no-audio,no-attention,no-title,no-border
+
+# Option キーを Alt として扱う (tmux の M-Left/M-Right などを有効化)
+macos-option-as-alt = true
+
+# Ghostty デフォルトの単語移動 (alt+left=esc:b / alt+right=esc:f) を解除し、
+# 生の Alt+矢印を tmux に届ける
+keybind = alt+left=unbind
+keybind = alt+right=unbind
+keybind = alt+up=unbind
+keybind = alt+down=unbind
