@@ -16,4 +16,4 @@ worktrees/**
 .forge-workspace
 spec-planner-output/
 .forge/
-
+.claude-output
