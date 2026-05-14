@@ -16,6 +16,7 @@ if [ "$(uname)" != "Darwin" ]; then
     libssl-dev \
     pkg-config \
     fzf \
+    jq \
     ripgrep \
     xdg-utils
 fi
@@ -97,6 +98,30 @@ if [ ! -L ~/.claude/agents ]; then
   rm -rf ~/.claude/agents
 fi
 ln -sfnv $ROOT/claude/agents $HOME/.claude/agents
+
+# Claude Code フックスクリプト (ディレクトリは symlink にしない: nono など外部ツールが配置するファイルと共存させる)
+if [ ! -d ~/.claude/hooks ]; then
+  mkdir -p ~/.claude/hooks
+  echo '~/.claude/hooks was created'
+fi
+ln -sfv $ROOT/claude/hooks/worktree-create.sh $HOME/.claude/hooks/worktree-create.sh
+
+# Claude Code settings.json に WorktreeCreate フック設定をマージ
+# settings.json は API キー等の機密混在のため symlink せず、jq でこのキーだけ書き換える
+CLAUDE_SETTINGS="$HOME/.claude/settings.json"
+if ! command -v jq &> /dev/null; then
+  echo "==> WARN: jq not found, skipping settings.json merge. Install jq and re-run, or add the WorktreeCreate hook manually." >&2
+else
+  if [ ! -f "$CLAUDE_SETTINGS" ]; then
+    echo '{}' > "$CLAUDE_SETTINGS"
+    echo "$CLAUDE_SETTINGS was created"
+  fi
+  CLAUDE_SETTINGS_TMP=$(mktemp)
+  jq '.hooks.WorktreeCreate = [{"hooks":[{"type":"command","command":"$HOME/.claude/hooks/worktree-create.sh"}]}]' \
+    "$CLAUDE_SETTINGS" > "$CLAUDE_SETTINGS_TMP" \
+    && mv "$CLAUDE_SETTINGS_TMP" "$CLAUDE_SETTINGS" \
+    && echo "==> Merged WorktreeCreate hook into $CLAUDE_SETTINGS"
+fi
 
 if [ ! -d ~/.config/zed ]; then
   mkdir -p ~/.config/zed

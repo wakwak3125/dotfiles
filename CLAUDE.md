@@ -11,7 +11,8 @@ macOS / Linux 両対応の dotfiles リポジトリ。
 dotfiles/
 ├── claude/           # Claude Code 関連 (~/.claude/ 配下に symlink)
 │   ├── skills/       # 個人 skills (spec-planner-plan, spec-planner-revise 等)
-│   └── agents/       # 個人 subagent 定義 (spec-planner-*, japan-{ehr,receipt}-* 等)
+│   ├── agents/       # 個人 subagent 定義 (spec-planner-*, japan-{ehr,receipt}-* 等)
+│   └── hooks/        # 個人 hooks (worktree-create.sh 等) ※ファイル単位で symlink
 ├── config/           # XDG_CONFIG_HOME 配下の設定
 │   ├── git/ignore    # グローバル gitignore
 │   ├── karabiner/    # Karabiner-Elements 設定 (macOS)
@@ -73,7 +74,7 @@ bootstrap.sh が以下を実行:
 - カスタムキー: `w`(FZF窓切替), `B`(ブランチ切替), `g`(ghq), `f`(ファイル検索), `F`(ツリー検索), `c`(Claude Code), `C`(新ウィンドウ)
 
 ### zsh
-- FZF ウィジェット: `Ctrl+R`(履歴), `Ctrl+G`(ghq), `Ctrl+W`(worktree)
+- FZF ウィジェット: `Ctrl+R`(履歴), `Ctrl+]`(ghq), `Ctrl+W`(worktree)
 - `wt` 関数: git worktree + tmux 連携ヘルパー
 
 ### Neovim
