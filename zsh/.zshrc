@@ -132,7 +132,7 @@ function fzf-ghq-widget() {
   zle reset-prompt
 }
 zle -N fzf-ghq-widget
-bindkey '^g' fzf-ghq-widget
+bindkey '^]' fzf-ghq-widget
 
 # git worktree移動 + tmuxセッション/ウィンドウ
 function fzf-worktree-widget() {
