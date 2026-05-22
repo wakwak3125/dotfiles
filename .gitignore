@@ -8,3 +8,4 @@ zsh/.zsh_sessions
 *.backup
 zsh/.zcompcache
 .worktrees/
+claude/skills/*/node_modules/
