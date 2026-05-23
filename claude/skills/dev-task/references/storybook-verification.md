@@ -6,16 +6,32 @@ Storybook + Playwright + Figma の比較ループを回す手順。
 
 ## 初回セットアップ (マシンごとに 1 回だけ)
 
-`${CLAUDE_SKILL_DIR}` は Claude Code が当該 Skill のディレクトリを指して設定する環境変数(personal/project どちらの配置でも正しく解決される)。Claude が以下を実行する:
+`${CLAUDE_SKILL_DIR}` は Claude Code が当該 Skill のディレクトリを指して設定する環境変数(personal/project どちらの配置でも正しく解決される)。
+
+### 存在チェック (常に実行)
+
+検証フェーズに入ったらまず存在確認だけを行う。`npm install` を直接呼ぶことは禁止:
 
 ```bash
-# まだ node_modules が無ければインストール
-if [ ! -d "${CLAUDE_SKILL_DIR}/node_modules/playwright" ]; then
-  (cd "${CLAUDE_SKILL_DIR}" && npm install && npx playwright install chromium)
-fi
+test -d "${CLAUDE_SKILL_DIR}/node_modules/playwright" \
+  && test -d "${CLAUDE_SKILL_DIR}/node_modules/playwright-core" \
+  && echo "playwright ready" \
+  || echo "playwright NOT installed"
 ```
 
-このチェックは毎回回しても安いので、検証フェーズに入ったタイミングで実行してよい。
+### 「ready」が出た場合
+
+**何もしない。** 既にインストール済みなので追加の install は不要。続けてスクリプト実行へ。`npm install` を「念のため」走らせる行為は、auto-mode で権限プロンプトを発生させて停止するだけ。
+
+### 「NOT installed」が出た場合
+
+ユーザーに **「Playwright と Chromium をインストールしてよいか」を明示的に確認してから**、承認を得た後に以下を実行:
+
+```bash
+(cd "${CLAUDE_SKILL_DIR}" && npm install && npx playwright install chromium)
+```
+
+Chromium binary のダウンロードを伴うため (200MB+、数分)、auto-mode でも自動実行しない。
 
 ## プロジェクトの前提
 
@@ -63,7 +79,9 @@ STORIES='[{"id":"button--default"},{"id":"button--hover","state":"hover"}]' \
   node "${CLAUDE_SKILL_DIR}/scripts/screenshot-stories.mjs"
 ```
 
-出力は `<project-root>/visual-check/<story-id>__<state>__<viewport>.png` に保存される (`OUT_DIR` で上書き可)。
+出力は `/tmp/dev-task-visual-check/<project-basename>/<story-id>__<state>__<viewport>__playwright.png` に保存される (`OUT_DIR` で上書き可)。`<project-basename>` は CWD のディレクトリ名。
+
+Figma 側の画像は同じディレクトリに `<story-id>__<state>__<viewport>__figma.png` の命名で対称的に保存する (フェーズ 4e-2 を参照)。両方揃って初めて視覚比較が成立する。
 
 特殊ポートやビューポート指定が必要な場合のみ追加:
 

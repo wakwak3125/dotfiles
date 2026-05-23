@@ -1,6 +1,6 @@
 // scripts/screenshot-stories.mjs
 //
-// frontend-fidelity Skill の検証スクリプト。Skill 配下の node_modules から
+// dev-task Skill の検証スクリプト。Skill 配下の node_modules から
 // playwright を解決するため、初回のみ ${CLAUDE_SKILL_DIR} 直下で
 // `npm install && npx playwright install chromium` を実行しておくこと。
 //
@@ -9,7 +9,9 @@
 //   STORIES='[{"id":"button--default"},{"id":"button--hover","state":"hover"}]' \
 //     node ${CLAUDE_SKILL_DIR}/scripts/screenshot-stories.mjs
 //
-// 出力は CWD 配下の ./visual-check に保存される。
+// 出力は /tmp/dev-task-visual-check/<project-basename>/ に保存される。
+// ファイル名規約: <story-id>__<state>__<viewport>__playwright.png
+// (Figma 側は __figma.png、同じ命名で対称になる)
 //
 // story オブジェクトの形:
 //   { id: string, state?: 'default' | 'hover' | 'focus' | 'active', focusSelector?: string }
@@ -43,7 +45,9 @@ async function detectStorybook() {
   );
 }
 
-const OUT_DIR = process.env.OUT_DIR ?? path.join(process.cwd(), 'visual-check');
+const OUT_DIR =
+  process.env.OUT_DIR ??
+  path.join('/tmp/dev-task-visual-check', path.basename(process.cwd()));
 
 const VIEWPORTS = process.env.VIEWPORTS
   ? JSON.parse(process.env.VIEWPORTS)
@@ -101,7 +105,7 @@ try {
 
       await page.waitForTimeout(150); // インタラクション後のスタイル安定待ち
 
-      const fileName = `${story.id}__${state}__${vp.name}.png`;
+      const fileName = `${story.id}__${state}__${vp.name}__playwright.png`;
       const outPath = path.join(OUT_DIR, fileName);
       await mkdir(path.dirname(outPath), { recursive: true });
       await root.screenshot({ path: outPath });
