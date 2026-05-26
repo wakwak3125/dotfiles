@@ -221,15 +221,39 @@ STORIES='[{"id":"button--default"}]' \
 
 **省略禁止。** Figma 画像なしで 4g に進むと visual-reviewer は判定不能 (NEEDS_REVISION) で返してくる。
 
-各 story × state × viewport の組合せについて、Figma MCP で対応する variant 画像を取得し、Playwright と**対称な命名**で保存する:
+各 story × state × viewport の組合せについて、Figma MCP で対応する variant 画像を取得し、Playwright と**完全に対称な命名**で保存する。
+
+##### 命名規約 (絶対遵守)
+
+Playwright スクショと Figma 画像のファイル名は **「`__playwright`」を「`__figma`」に置換しただけ**の関係でなければならない。それ以外の差異 (短縮形 / 大文字小文字 / 区切り文字) は禁止。
 
 ```
-/tmp/dev-task-visual-check/<project-basename>/<story-id>__<state>__<viewport>__figma.png
+✅ 正しい例:
+  features-order-nutrition-order-v2-drawer-mealcontenteditor--default__default__desktop__playwright.png
+  features-order-nutrition-order-v2-drawer-mealcontenteditor--default__default__desktop__figma.png
+
+❌ 違反パターン:
+  state__hover-header.png                                 → story-id 欠落 + __figma サフィックス欠落
+  mealcontenteditor--default__default__figma.png         → story-id を短縮、viewport も欠落
+  editor__hover-column__figma.png                        → story-id 短縮
+  Mealcontenteditor--Default__default__desktop__figma.png → 大文字混入 (Storybook の id は全小文字)
 ```
 
+##### 厳守ルール
+
+- `<story-id>` は **Storybook の `index.json` で取得した id を完全一致**で使う。プレフィックス (`features-order-...`) を含む全体。省略・短縮・大文字化はすべて禁止
+- `<state>` は Playwright 側で使った値と完全一致 (`default` / `hover` / `focus` 等)
+- `<viewport>` は Playwright 側で使った値と完全一致 (`desktop` / `mobile` / `drawer` 等)
+- サフィックスは **必ず `__figma.png`** で終わる (`-figma.png`、`_figma.png`、サフィックスなしはすべて禁止)
 - 解像度はビューポート幅と一致させる (最低 2x の rendering を要求)
 - variant 名は Figma 側の `state=hover` 等と story 側 (`button--hover`) の対応を取る
 - Figma フレーム外の余白や背景は含めない (フレーム単位で出力)
+
+##### 命名の作り方 (確実な手順)
+
+1. フェーズ 4e-1 で保存した Playwright スクショのパスを `ls /tmp/dev-task-visual-check/<project-basename>/*__playwright.png` で確認
+2. 各ファイル名の `__playwright.png` を `__figma.png` に置換した文字列をそのまま Figma 画像の保存先とする
+3. 保存後、4e-3 のペア存在チェックで揃っていることを必ず確認
 
 #### 4e-3. ペア存在チェック
 
