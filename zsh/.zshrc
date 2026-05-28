@@ -269,9 +269,6 @@ function fgg() {
     fi
 }
 
-# git worktree helper command
-autoload -Uz wt
-
 # Claude Code YOLO mode
 autoload -Uz yolo
 compdef yolo=claude

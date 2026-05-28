@@ -34,7 +34,8 @@ dotfiles/
 │   ├── tmux-file-select     # FZF ファイルセレクター
 │   ├── tmux-git-switch      # FZF git ブランチスイッチャー
 │   ├── tmux-repo-switch     # FZF ghq リポジトリスイッチャー
-│   └── tmux-switcher        # FZF tmux ウィンドウスイッチャー
+│   ├── tmux-switcher        # FZF tmux ウィンドウスイッチャー
+│   └── wt/                  # `wt` コマンド (Go 製 git worktree + tmux ヘルパー)
 ├── zsh/
 │   ├── .zshrc        # メインシェル設定
 │   ├── .zshrc_local  # マシン固有設定 (gitignore対象; Homebrew PATH, gcloud等)
@@ -75,7 +76,7 @@ bootstrap.sh が以下を実行:
 
 ### zsh
 - FZF ウィジェット: `Ctrl+R`(履歴), `Ctrl+]`(ghq), `Ctrl+W`(worktree)
-- `wt` 関数: git worktree + tmux 連携ヘルパー
+- `wt` コマンド: git worktree + tmux 連携ヘルパー (Go 製、`script/wt/` からビルドして `~/.local/bin/wt` に配置)
 
 ### Neovim
 - lazy.nvim でプラグイン管理

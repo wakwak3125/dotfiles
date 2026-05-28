@@ -154,6 +154,15 @@ fi
 # 言語・ツールのインストール (config/mise/config.toml に定義済み)
 mise install -y
 
+# wt (git worktree ヘルパー) をビルドして ~/.local/bin に配置
+# mise の Go が必要なため mise install 後に実行する
+if command -v go &> /dev/null; then
+  echo "==> Building wt..."
+  (cd $ROOT/script/wt && go build -o $HOME/.local/bin/wt .)
+else
+  echo "==> WARN: go not found, skipping wt build. Re-run bootstrap.sh after 'mise install'." >&2
+fi
+
 # gitの設定
 git config --global user.name "Ryo Sakaguchi"
 git config --global user.email "rsakaguchi3125@gmail.com"
