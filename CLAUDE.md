@@ -35,11 +35,11 @@ dotfiles/
 │   ├── tmux-git-switch      # FZF git ブランチスイッチャー
 │   ├── tmux-repo-switch     # FZF ghq リポジトリスイッチャー
 │   ├── tmux-switcher        # FZF tmux ウィンドウスイッチャー
-│   └── wt/                  # `wt` コマンド (Go 製 git worktree + tmux ヘルパー)
+│   └── git-wt-tmux-hook.sh  # git-wt の tmux 連携 hook (作成/削除時に tmux window 操作)
 ├── zsh/
 │   ├── .zshrc        # メインシェル設定
 │   ├── .zshrc_local  # マシン固有設定 (gitignore対象; Homebrew PATH, gcloud等)
-│   └── functions/    # カスタム関数 (wt, tmux-auto-attach, _gh)
+│   └── functions/    # カスタム関数 (tmux-auto-attach, yolo, _gh)
 ├── zshenv            # 環境変数
 ├── ideavimrc         # IntelliJ IdeaVim 設定
 ├── keymap/           # キーマップ設定
@@ -76,7 +76,7 @@ bootstrap.sh が以下を実行:
 
 ### zsh
 - FZF ウィジェット: `Ctrl+R`(履歴), `Ctrl+]`(ghq), `Ctrl+W`(worktree)
-- `wt` コマンド: git worktree + tmux 連携ヘルパー (Go 製、`script/wt/` からビルドして `~/.local/bin/wt` に配置)
+- `git wt` コマンド: git worktree ヘルパー ([k1LoW/git-wt](https://github.com/k1LoW/git-wt)、mise で導入)。worktree 配置・tmux 連携・cd は git config (`wt.basedir`/`wt.hook`/`wt.deletehook`/`wt.nocd`) で制御。tmux 連携の実体は `script/git-wt-tmux-hook.sh`。マージ済み/gone ブランチの掃除は `git wtclean` (= `gh poi` + `git worktree prune`)
 
 ### Neovim
 - lazy.nvim でプラグイン管理

@@ -50,6 +50,7 @@ ln -sfv $ROOT/script/tmux-repo-switch $HOME/.local/bin/tmux-repo-switch
 ln -sfv $ROOT/script/tmux-worktree-switch $HOME/.local/bin/tmux-worktree-switch
 ln -sfv $ROOT/script/tmux-file-select $HOME/.local/bin/tmux-file-select
 ln -sfv $ROOT/script/tmux-toggle-pane $HOME/.local/bin/tmux-toggle-pane
+ln -sfv $ROOT/script/git-wt-tmux-hook.sh $HOME/.local/bin/git-wt-tmux-hook.sh
 
 if [ ! -d ~/.config/alacritty ]; then
   mkdir -p ~/.config/alacritty
@@ -154,16 +155,20 @@ fi
 # 言語・ツールのインストール (config/mise/config.toml に定義済み)
 mise install -y
 
-# wt (git worktree ヘルパー) をビルドして ~/.local/bin に配置
-# mise の Go が必要なため mise install 後に実行する
-if command -v go &> /dev/null; then
-  echo "==> Building wt..."
-  (cd $ROOT/script/wt && go build -o $HOME/.local/bin/wt .)
-else
-  echo "==> WARN: go not found, skipping wt build. Re-run bootstrap.sh after 'mise install'." >&2
-fi
+# 旧 wt (自前 Go 製) は git-wt へ移行済み。残存バイナリがあれば削除する
+rm -f $HOME/.local/bin/wt
 
 # gitの設定
 git config --global user.name "Ryo Sakaguchi"
 git config --global user.email "rsakaguchi3125@gmail.com"
 git config --global ghq.root $HOME/src
+
+# git-wt (git worktree ヘルパー) のグローバル設定
+# worktree 配置を <repo親>/worktree/<repo名>/<branch> に揃え、tmux 連携 hook を登録する。
+# いずれも set (--add ではない) なので bootstrap 再実行でも重複しない。
+git config --global wt.basedir "../worktree/{gitroot}"
+git config --global wt.nocd create
+git config --global wt.hook "$HOME/.local/bin/git-wt-tmux-hook.sh add"
+git config --global wt.deletehook "$HOME/.local/bin/git-wt-tmux-hook.sh delete"
+# マージ済み/gone ブランチの掃除 (旧 wt clean の代替): gh poi + worktree prune
+git config --global alias.wtclean "!gh poi && git worktree prune"

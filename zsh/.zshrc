@@ -9,6 +9,8 @@ fpath=(
 eval "$(sheldon source)"
 eval "$(~/.local/bin/mise activate zsh)"
 eval "$(direnv hook zsh)"
+# git-wt: git worktree ヘルパー。git() ラッパー関数と補完を有効化 (未インストール時はスキップ)
+command -v git-wt >/dev/null 2>&1 && eval "$(git-wt --init zsh)"
 export JAVA_HOME="$(mise where java)"
 
 source $ZDOTDIR/.zshrc_local
