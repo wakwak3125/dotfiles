@@ -38,22 +38,27 @@ return {
     config = function() pcall(require("telescope").load_extension, "fzf") end,
   },
 
-  -- Treesitter
+  -- Treesitter (main ブランチ: Neovim 0.12+ 対応の書き直し版)
   {
     "nvim-treesitter/nvim-treesitter",
-    event = { "BufReadPost", "BufNewFile" },
+    branch = "main",
+    lazy = false,
     build = ":TSUpdate",
-    opts = {
-      ensure_installed = {
+    config = function()
+      require("nvim-treesitter").install({
         "lua", "vim", "vimdoc", "markdown", "markdown_inline",
         "json", "yaml", "bash", "typescript", "tsx", "javascript",
         "go", "rust", "python"
-      },
-      highlight        = { enable = true },
-      indent           = { enable = true },
-    },
-    config = function(_, opts)
-      require("nvim-treesitter.configs").setup(opts)
+      })
+      -- パーサがある filetype で highlight / indent を有効化
+      vim.api.nvim_create_autocmd("FileType", {
+        group = vim.api.nvim_create_augroup("treesitter_start", {}),
+        callback = function(args)
+          if pcall(vim.treesitter.start, args.buf) then
+            vim.bo[args.buf].indentexpr = "v:lua.require'nvim-treesitter'.indentexpr()"
+          end
+        end,
+      })
     end,
   },
 
