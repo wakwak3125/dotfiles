@@ -27,14 +27,14 @@
 
 ## Figma 仕様とのマッチング
 
-フェーズ 4 (figma-extraction) で抽出した要素ごとに:
+フェーズ 4a (figma-extraction) で抽出した要素ごとに:
 
 1. semantic ロール (button 系、card 系、input 系) で候補 primitive を絞る
 2. 必要な variants と states をサポートしているか確認
 3. 必要な children / slot を受けるか確認
 4. トークン使用を確認 — primitive がトークンシステムに既に紐付いていること。内部で raw value を使っているなら、それは回避ではなく報告すべき問題。
 
-マッチ成立 = 「この Figma 要素の実装 = primitive X をこの props で合成」。フェーズ 5 が機械的に適用できるよう記録する。
+マッチ成立 = 「この Figma 要素の実装 = primitive X をこの props で合成」。フェーズ 4d が機械的に適用できるよう記録する。
 
 ## マッチする primitive がない場合
 

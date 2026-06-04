@@ -2,7 +2,7 @@
 
 `dev-task` で React TS コードを書く前に読むこと。
 
-> Figma 起点の視覚再現タスクは `frontend-fidelity` Skill に委譲する。本ファイルはあらゆる React TS 変更に通用するロジック/構造のパターンを扱う。
+> Figma 起点の視覚再現は `dev-task` の UI サブフェーズ (4a〜4g) が担当する。本ファイルはあらゆる React TS 変更に通用するロジック/構造のパターンを扱う。
 
 ## 型
 

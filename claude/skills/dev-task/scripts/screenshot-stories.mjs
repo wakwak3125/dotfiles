@@ -30,10 +30,14 @@ const STORYBOOK_CANDIDATES = process.env.STORYBOOK_URL
       'http://localhost:9009', // 旧デフォルト
     ];
 
+// ローカルの Storybook は通常数十 ms で応答する。2s あれば起動済みかの
+// 判定には十分で、未起動ポートで長く待たない。
+const DETECT_TIMEOUT_MS = 2000;
+
 async function detectStorybook() {
   for (const url of STORYBOOK_CANDIDATES) {
     try {
-      const res = await fetch(`${url}/index.json`, { signal: AbortSignal.timeout(2000) });
+      const res = await fetch(`${url}/index.json`, { signal: AbortSignal.timeout(DETECT_TIMEOUT_MS) });
       if (res.ok) return url;
     } catch {
       // continue to next candidate
@@ -49,14 +53,26 @@ const OUT_DIR =
   process.env.OUT_DIR ??
   path.join('/tmp/dev-task-visual-check', path.basename(process.cwd()));
 
-const VIEWPORTS = process.env.VIEWPORTS
-  ? JSON.parse(process.env.VIEWPORTS)
-  : [
-      { name: 'mobile', width: 390, height: 844 },
-      { name: 'desktop', width: 1280, height: 800 },
-    ];
+// env var の JSON を、失敗時に修正方法がわかるエラー付きでパースする
+function parseJsonEnv(name, fallback) {
+  const raw = process.env[name];
+  if (!raw) return fallback;
+  try {
+    return JSON.parse(raw);
+  } catch (err) {
+    console.error(`${name} の JSON パースに失敗しました: ${err.message}`);
+    console.error(`受け取った値: ${raw}`);
+    console.error(`例: ${name}='[{"id":"button--default"}]' node ...`);
+    process.exit(1);
+  }
+}
 
-const stories = JSON.parse(process.env.STORIES ?? '[]');
+const VIEWPORTS = parseJsonEnv('VIEWPORTS', [
+  { name: 'mobile', width: 390, height: 844 },
+  { name: 'desktop', width: 1280, height: 800 },
+]);
+
+const stories = parseJsonEnv('STORIES', []);
 
 if (stories.length === 0) {
   console.error('story が指定されていません。STORIES env var を JSON 配列で渡してください。');
@@ -75,7 +91,7 @@ try {
     for (const vp of VIEWPORTS) {
       const ctx = await browser.newContext({
         viewport: { width: vp.width, height: vp.height },
-        deviceScaleFactor: 2,
+        deviceScaleFactor: 2, // Figma 画像と同じ 2x rendering で視覚比較するため (SKILL.md 4e-2 の解像度ルールと対応)
       });
       const page = await ctx.newPage();
 

@@ -4,6 +4,16 @@ Storybook + Playwright + Figma の比較ループを回す手順。
 
 このスクリプトは **Skill 配下にインストールされた Playwright をどのプロジェクトからも共有して使う**設計。プロジェクトごとに Playwright をインストールする必要はない。
 
+## 目次
+
+- 初回セットアップ (存在チェック / install 手順)
+- プロジェクトの前提
+- ループ実行 (1. Story ID 特定 / 2. Story リスト構築 / 3. スクショ実行 / 4. 比較)
+- 反復
+- 停止条件
+- Claude の比較の心得
+- トラブルシューティング
+
 ## 初回セットアップ (マシンごとに 1 回だけ)
 
 `${CLAUDE_SKILL_DIR}` は Claude Code が当該 Skill のディレクトリを指して設定する環境変数(personal/project どちらの配置でも正しく解決される)。
@@ -50,7 +60,7 @@ npm run storybook -- --ci --quiet &
 
 ### 1. Story ID の特定
 
-実行中の Storybook から `index.json` を読み、フェーズ 6 で追加/更新した story の `id` を取り出す:
+実行中の Storybook から `index.json` を読み、フェーズ 4d で追加/更新した story の `id` を取り出す:
 
 ```
 GET http://localhost:6006/index.json
@@ -111,7 +121,7 @@ STORIES='[...]' \
 
 指摘した差分ごとに:
 
-- 仕様 (フェーズ 4 の出力) または token-map (フェーズ 2) にトレースバック
+- 仕様 (フェーズ 4a の出力) または token-map (フェーズ 4b) にトレースバック
 - 症状ではなく原因を直す (誤ったトークン名か、誤った値か)
 - 影響を受けた story だけ撮り直す (毎回全件回さない)
 
