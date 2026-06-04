@@ -7,49 +7,48 @@
 // custom settings, run `zed: open default settings` from the
 // command palette (cmd-shift-p / ctrl-shift-p)
 {
+  "terminal": {
+    "dock": "right",
+  },
   "agent": {
     "dock": "right",
     "favorite_models": [],
-    "model_parameters": []
+    "model_parameters": [],
   },
   "project_panel": {
-    "dock": "left"
+    "dock": "left",
   },
   "cli_default_open_behavior": "new_window",
-  "agent_servers": {
-    "claude-acp": {
-      "type": "registry"
-    }
-  },
+  "agent_servers": {},
   "telemetry": {
     "diagnostics": false,
-    "metrics": false
+    "metrics": false,
   },
   "auto_install_extensions": {
     "kotlin": true,
     "java": true,
     "groovy": true,
-    "dockerfile": true
+    "dockerfile": true,
   },
   "languages": {
     "Markdown": {
       "indent_guides": {
-        "active_line_width": 1
-      }
+        "active_line_width": 1,
+      },
     },
     "Kotlin": {
-      "language_servers": ["kotlin-language-server"]
-    }
+      "language_servers": ["kotlin-lsp"],
+    },
   },
   "session": {
-    "trust_all_worktrees": true
+    "trust_all_worktrees": true,
   },
   "vim_mode": true,
   "base_keymap": "JetBrains",
   "icon_theme": {
     "mode": "dark",
     "light": "Zed (Default)",
-    "dark": "Zed (Default)"
+    "dark": "Zed (Default)",
   },
   "ui_font_size": 16,
   "buffer_font_size": 15,
