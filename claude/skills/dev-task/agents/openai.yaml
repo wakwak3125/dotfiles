@@ -1,0 +1,4 @@
+interface:
+  display_name: "Dev Task"
+  short_description: "Implement repository development tasks"
+  default_prompt: "Use $dev-task to implement this repository development task end to end."
