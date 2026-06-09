@@ -94,19 +94,6 @@ if [ ! -L ~/.claude/skills ]; then
 fi
 ln -sfnv $ROOT/claude/skills $HOME/.claude/skills
 
-# Codex 個人 skills
-# ~/.codex/skills には Codex の .system skills も置かれるため、ディレクトリ全体は symlink しない。
-# dev-task だけを Claude Code と同じ Skill ディレクトリへ向け、Skill 本体を二重管理しない。
-if [ ! -d ~/.codex/skills ]; then
-  mkdir -p ~/.codex/skills
-  echo '~/.codex/skills was created'
-fi
-
-if [ -e ~/.codex/skills/dev-task ] && [ ! -L ~/.codex/skills/dev-task ]; then
-  rm -rf ~/.codex/skills/dev-task
-fi
-ln -sfnv $ROOT/claude/skills/dev-task $HOME/.codex/skills/dev-task
-
 # Claude Code 個人 agents
 if [ ! -L ~/.claude/agents ]; then
   rm -rf ~/.claude/agents

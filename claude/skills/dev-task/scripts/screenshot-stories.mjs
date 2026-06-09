@@ -1,14 +1,13 @@
 // scripts/screenshot-stories.mjs
 //
 // dev-task Skill の検証スクリプト。Skill 配下の node_modules から
-// playwright を解決するため、初回のみ ${DEV_TASK_SKILL_DIR} 直下で
+// playwright を解決するため、初回のみ ${CLAUDE_SKILL_DIR} 直下で
 // `npm install && npx playwright install chromium` を実行しておくこと。
 //
 // 任意のプロジェクトディレクトリから絶対パスで呼ぶ:
 //   cd <project-root>
-//   DEV_TASK_SKILL_DIR="${DEV_TASK_SKILL_DIR:-${CLAUDE_SKILL_DIR:-${CODEX_SKILL_DIR:-$HOME/.codex/skills/dev-task}}}"
 //   STORIES='[{"id":"button--default"},{"id":"button--hover","state":"hover"}]' \
-//     node ${DEV_TASK_SKILL_DIR}/scripts/screenshot-stories.mjs
+//     node ${CLAUDE_SKILL_DIR}/scripts/screenshot-stories.mjs
 //
 // 出力は /tmp/dev-task-visual-check/<project-basename>/ に保存される。
 // ファイル名規約: <story-id>__<state>__<viewport>__playwright.png
