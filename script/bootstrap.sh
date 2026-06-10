@@ -107,6 +107,18 @@ if [ ! -d ~/.claude/hooks ]; then
 fi
 ln -sfv $ROOT/claude/hooks/worktree-create.sh $HOME/.claude/hooks/worktree-create.sh
 
+# Claude Code org 単位の CLAUDE.md (claude/orgs/<org>.CLAUDE.md → ~/src/github.com/<org>/CLAUDE.md)
+# claude/orgs/ は gitignore 対象 (会社固有情報を含むため)。ファイルがあるマシンでのみ symlink を張る
+if [ -d "$ROOT/claude/orgs" ]; then
+  for org_md in "$ROOT"/claude/orgs/*.CLAUDE.md; do
+    [ -f "$org_md" ] || continue
+    org=$(basename "$org_md" .CLAUDE.md)
+    if [ -d "$HOME/src/github.com/$org" ]; then
+      ln -sfv "$org_md" "$HOME/src/github.com/$org/CLAUDE.md"
+    fi
+  done
+fi
+
 # Claude Code settings.json に WorktreeCreate フック設定をマージ
 # settings.json は API キー等の機密混在のため symlink せず、jq でこのキーだけ書き換える
 CLAUDE_SETTINGS="$HOME/.claude/settings.json"

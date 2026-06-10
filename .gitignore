@@ -10,3 +10,4 @@ zsh/.zcompcache
 .worktrees/
 claude/skills/*/node_modules/
 claude/skills/sentry-cli/
+claude/orgs/
