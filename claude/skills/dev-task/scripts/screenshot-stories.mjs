@@ -14,7 +14,13 @@
 // (Figma 側は __figma.png、同じ命名で対称になる)
 //
 // story オブジェクトの形:
-//   { id: string, state?: 'default' | 'hover' | 'focus' | 'active', focusSelector?: string }
+//   { id: string, state?: 'default' | 'hover' | 'focus' | 'active',
+//     hoverSelector?: string, focusSelector?: string }
+//
+// 撮影品質の担保:
+//   - document.fonts.ready を待つ (font swap 前のスクショによるタイポグラフィ誤判定を防ぐ)
+//   - animation / transition を CSS で無効化 (遷移途中のスクショを防ぐ。hover 等の
+//     最終スタイルは transition なしで即時適用されるため、state 比較には影響しない)
 
 import { chromium } from 'playwright';
 import { mkdir } from 'node:fs/promises';
@@ -97,6 +103,14 @@ try {
 
       const url = `${STORYBOOK_URL}/iframe.html?id=${story.id}&viewMode=story`;
       await page.goto(url, { waitUntil: 'networkidle' });
+
+      // アニメーション・遷移を止め、カーソル点滅も消して撮影を安定させる
+      await page.addStyleTag({
+        content:
+          '*, *::before, *::after { animation: none !important; transition: none !important; caret-color: transparent !important; }',
+      });
+      // Web フォントのロード完了を待つ (font swap 前に撮ると weight / metrics が変わる)
+      await page.evaluate(() => document.fonts.ready);
       await page.waitForTimeout(150); // paint 安定待ち
 
       const root = page.locator('#storybook-root, #root').first();
@@ -105,7 +119,10 @@ try {
       const state = story.state ?? 'default';
 
       if (state === 'hover') {
-        await root.hover();
+        const target = story.hoverSelector
+          ? root.locator(story.hoverSelector).first()
+          : root;
+        await target.hover();
       } else if (state === 'focus') {
         const focusable = story.focusSelector
           ? root.locator(story.focusSelector).first()
