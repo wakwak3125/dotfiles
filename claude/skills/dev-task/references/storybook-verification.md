@@ -6,13 +6,24 @@ Storybook + Playwright + Figma の比較ループを回す手順。
 
 ## 目次
 
+- Story の用意基準 (フェーズ 4d)
 - 初回セットアップ (存在チェック / install 手順)
 - プロジェクトの前提
-- ループ実行 (1. Story ID 特定 / 2. Story リスト構築 / 3. スクショ実行 / 4. 比較)
+- ループ実行 (1. Story ID 特定 / 2. Story リスト構築 / 3. スクショ実行 / 4. ペア存在チェック / 5. 比較)
 - 反復
 - 停止条件
 - Claude の比較の心得
 - トラブルシューティング
+
+## Story の用意基準 (フェーズ 4d)
+
+どの state に専用 story を用意するかはタスクごとに判断する:
+
+- Figma の variant として異なる state → 専用 story
+- 振る舞い的に DOM が変わる state (loading、error、empty) → 専用 story
+- Storybook controls で十分カバーできる単なる props 順列 → スキップ
+
+Story 名は state を反映: `Default`、`Hover`、`Focus`、`Disabled`、`Loading`、`Error`、`Empty`。
 
 ## 初回セットアップ (マシンごとに 1 回だけ)
 
@@ -25,8 +36,10 @@ Storybook + Playwright + Figma の比較ループを回す手順。
 ```bash
 test -d "${CLAUDE_SKILL_DIR}/node_modules/playwright" \
   && test -d "${CLAUDE_SKILL_DIR}/node_modules/playwright-core" \
-  && echo "playwright ready" \
-  || echo "playwright NOT installed"
+  && test -d "${CLAUDE_SKILL_DIR}/node_modules/pixelmatch" \
+  && test -d "${CLAUDE_SKILL_DIR}/node_modules/pngjs" \
+  && echo "deps ready" \
+  || echo "deps NOT installed"
 ```
 
 ### 「ready」が出た場合
@@ -73,11 +86,13 @@ GET http://localhost:6006/index.json
 対象 story ごとに、スクリプト介入が必要な state を判断:
 
 - `Default`、`Disabled`、`Loading`、`Empty`、`Error` — 介入なし、遷移して撮るだけ
-- `Hover` — story root か特定セレクタを hover
-- `Focus` — story 内の focusable 要素を focus
+- `Hover` — story root か特定セレクタ (`hoverSelector`) を hover
+- `Focus` — story 内の focusable 要素 (`focusSelector` で上書き可) を focus
 - `Active` — mousedown + 保持
 
 これを JSON で `STORIES` env var に渡す。
+
+**ビューポートは Figma に存在する breakpoint だけを `VIEWPORTS` で明示する。** スクリプトのデフォルト (mobile + desktop) に頼らない。viewport 幅は Figma フレーム幅に合わせる — 寸法が揃っていないと 4f の機械 diff が `dimensionMismatch` を報告し、比較精度も落ちる。
 
 ### 3. スクショ実行 (任意のプロジェクトから)
 
@@ -102,12 +117,36 @@ STORIES='[...]' \
   node "${CLAUDE_SKILL_DIR}/scripts/screenshot-stories.mjs"
 ```
 
-### 4. 比較
+### 4. ペア存在チェック (フェーズ 4e-3)
 
-各 story+state+viewport の組合せについて:
+各 story × state × viewport について、`__playwright.png` と `__figma.png` の**両方**が存在することを確認する。揃わない限り機械 diff / 視覚比較に進まない:
+
+```bash
+DIR="/tmp/dev-task-visual-check/$(basename "$(pwd)")"
+ls "$DIR"/*__playwright.png | while read pw; do
+  fig="${pw%__playwright.png}__figma.png"
+  [ -f "$fig" ] || echo "missing: $fig"
+done
+```
+
+欠けているペアがあれば Figma 画像取得 (4e-2) に戻る。
+
+### 5. 比較
+
+**まず機械的 diff を生成する** (フェーズ 4f):
+
+```bash
+cd <project-root>
+node "${CLAUDE_SKILL_DIR}/scripts/diff-pairs.mjs"
+```
+
+各ペアの `__diff.png` (差分ハイライト) と diff 率が出る。`dimensionMismatch` があれば取得条件のずれなので先に直す。diff 画像は「どこを注視すべきか」を絞る手がかりであり、最終判定は visual-reviewer が行う。
+
+その上で、各 story+state+viewport の組合せについて:
 
 - Playwright スクショを読み込む
 - 対応する variant の Figma フレーム画像を同じビューポートで読み込む
+- `__diff.png` でハイライトされた領域を重点的に確認する
 - 以下の順で視覚比較:
   1. **構造** — 同じ要素が存在し、階層が一致
   2. **余白** — padding、gap、margin が一貫 (差分はトークン単位以内)
@@ -124,6 +163,8 @@ STORIES='[...]' \
 - 仕様 (フェーズ 4a の出力) または token-map (フェーズ 4b) にトレースバック
 - 症状ではなく原因を直す (誤ったトークン名か、誤った値か)
 - 影響を受けた story だけ撮り直す (毎回全件回さない)
+- `__figma.png` は初回取得をキャッシュとして流用する (Figma デザイン側が変わったときだけ再取得)
+- 撮り直したペアは `diff-pairs.mjs` を再実行して `__diff.png` を更新する
 
 ## 停止条件
 
@@ -145,6 +186,7 @@ STORIES='[...]' \
 | 症状 | 原因 | 対処 |
 |---|---|---|
 | `Cannot find package 'playwright'` | 初回セットアップ未実施 | `cd "${CLAUDE_SKILL_DIR}" && npm install` |
+| `Cannot find package 'pixelmatch'` | 旧構成でセットアップ済み (pixelmatch 追加前) | `cd "${CLAUDE_SKILL_DIR}" && npm install` (ユーザー確認後) |
 | `browserType.launch: Executable doesn't exist` | Chromium 未ダウンロード | `cd "${CLAUDE_SKILL_DIR}" && npx playwright install chromium` |
 | `Storybook を検出できませんでした` | Storybook 未起動 or 特殊ポート | プロジェクトで起動するか `STORYBOOK_URL` を設定 |
 | スクショが空白/真っ白 | dev server が描画前 | `page.waitForTimeout` を上げる or `networkidle` 待ち追加 |
