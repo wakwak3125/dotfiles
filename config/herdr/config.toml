@@ -32,10 +32,10 @@ next_tab = "alt+right"
 previous_workspace = "alt+up"
 next_workspace = "alt+down"
 
-# 分割: prefix+minus (上下) はデフォルトのまま tmux の bind - と一致。
-# tmux の bind | (左右) は herdr のキー構文に pipe が無いためデフォルト prefix+v を使う。
-# split_vertical = "prefix+v"
-# split_horizontal = "prefix+minus"
+# 分割: tmux の bind - (上下) / bind | (左右) を踏襲し、記号キーで直感的に。
+# split_horizontal = 上下分割 (横線 -)、split_vertical = 左右分割 (縦線 |)
+split_horizontal = "prefix+minus"
+split_vertical = "prefix+|"
 
 # workspace_picker = "prefix+w" (デフォルト) が tmux の bind w (switcher) の上位互換
 
