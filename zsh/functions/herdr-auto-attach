@@ -1,0 +1,51 @@
+# herdr auto-attach function
+# ログインシェルで herdr の default session に自動アタッチする
+# (tmux-auto-attach の herdr 版。PTY はサーバ常駐なので named session 分岐は不要)
+# Excludes: VSCode, JetBrains IDEs
+
+herdr-auto-attach() {
+  # 設定: herdr自動起動を有効にするか（~/.zshrc_localで上書き可能）
+  local AUTO_HERDR="${AUTO_HERDR:-true}"
+
+  # 無効化されている場合はスキップ
+  if [[ "$AUTO_HERDR" != "true" ]]; then
+    return 0
+  fi
+
+  # 既にherdr内にいる場合はスキップ
+  if [[ -n "$HERDR_ENV" ]]; then
+    return 0
+  fi
+
+  # tmux内にいる場合はスキップ（移行完了までの併存。ネスト起動を防ぐ）
+  if [[ -n "$TMUX" ]]; then
+    return 0
+  fi
+
+  # ログインシェルでない場合はスキップ
+  if [[ ! "$-" == *l* ]]; then
+    return 0
+  fi
+
+  # herdrがインストールされていない場合はスキップ
+  if ! command -v herdr &> /dev/null; then
+    return 0
+  fi
+
+  # IDEターミナルの検出と除外
+  # VSCode / Cursor
+  if [[ -n "$VSCODE_INJECTION" ]] || [[ "$TERM_PROGRAM" == "vscode" ]] || [[ -n "$VSCODE_RESOLVING_ENVIRONMENT" ]] || [[ "$TERM_PROGRAM" == "cursor" ]]; then
+    return 0
+  fi
+
+  # JetBrains IDEs (IntelliJ, PyCharm, etc.)
+  if [[ -n "$TERMINAL_EMULATOR" ]] && [[ "$TERMINAL_EMULATOR" =~ "JetBrains" ]]; then
+    return 0
+  fi
+
+  # default session に attach（サーバ未起動なら自動起動される）
+  exec herdr
+}
+
+# 関数を実行
+herdr-auto-attach
