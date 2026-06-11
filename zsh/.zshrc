@@ -18,21 +18,33 @@ source $ZDOTDIR/.zshrc_local
 bindkey -e
 autoload -Uz add-zsh-hook
 
-# tmux window名をgitブランチ名に自動更新
-function _tmux_update_window_name() {
-  [[ -n "$TMUX" ]] || return
-  local branch
+# herdr tab 名 / tmux window 名を git ブランチ名に自動更新
+function _mux_update_window_name() {
+  [[ -n "$HERDR_ENV" || -n "$TMUX" ]] || return
+  local name branch
   branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null)
   if [[ -n "$branch" ]]; then
     if [[ "$branch" == "HEAD" ]]; then
       branch=$(git rev-parse --short HEAD 2>/dev/null)
     fi
-    tmux rename-window "${branch##*/}"
+    name="${branch##*/}"
   else
-    tmux rename-window "${PWD##*/}"
+    name="${PWD##*/}"
+  fi
+  if [[ -n "$HERDR_ENV" ]]; then
+    # tab_id は pane 生存中不変なので初回のみ逆引きしてキャッシュ。
+    # rename は前回値と変わったときだけ送り precmd 毎の socket 往復を避ける
+    if [[ -z "$_HERDR_TAB_ID" ]]; then
+      _HERDR_TAB_ID=$(herdr pane get "$HERDR_PANE_ID" 2>/dev/null | jq -r '.result.pane.tab_id // empty' 2>/dev/null)
+    fi
+    if [[ -n "$_HERDR_TAB_ID" && "$name" != "$_HERDR_TAB_NAME" ]]; then
+      herdr tab rename "$_HERDR_TAB_ID" "$name" >/dev/null 2>&1 && _HERDR_TAB_NAME="$name"
+    fi
+  elif [[ -n "$TMUX" ]]; then
+    tmux rename-window "$name"
   fi
 }
-add-zsh-hook precmd _tmux_update_window_name
+add-zsh-hook precmd _mux_update_window_name
 
 #setopt auto_cd
 setopt extended_glob
@@ -101,34 +113,43 @@ function fzf-history-widget() {
 zle -N fzf-history-widget
 bindkey '^r' fzf-history-widget
 
-# ghqリポジトリ移動 + tmuxセッション
+# ghqリポジトリ移動 + herdr workspace / tmuxセッション
 function fzf-ghq-widget() {
-  local selected session_name
+  local selected workspace_name
   selected=$(ghq list -p | fzf --query="$LBUFFER")
   if [[ -n "$selected" ]]; then
-    # リポジトリ名をセッション名に（.を_に置換）
-    session_name=$(basename "$selected" | tr '.' '_')
+    # リポジトリ名をworkspace/セッション名に（.を_に置換）
+    workspace_name=$(basename "$selected" | tr '.' '_')
 
-    if [[ -n "$TMUX" ]]; then
-      # tmux内の場合
+    if [[ -n "$HERDR_ENV" ]]; then
+      # herdr内の場合: workspace = repo (案A)。label一致で focus/create
+      local ws_id current_ws
+      ws_id=$(herdr workspace list 2>/dev/null | jq -r --arg l "$workspace_name" '.result.workspaces[] | select(.label == $l) | .workspace_id' 2>/dev/null | head -1)
+      current_ws=$(herdr pane get "$HERDR_PANE_ID" 2>/dev/null | jq -r '.result.pane.workspace_id // empty' 2>/dev/null)
+      if [[ -n "$ws_id" && "$ws_id" == "$current_ws" ]]; then
+        # すでにそのworkspaceにいる場合はcdを実行
+        cd "$selected"
+      elif [[ -n "$ws_id" ]]; then
+        herdr workspace focus "$ws_id" >/dev/null 2>&1 || cd "$selected"
+      else
+        herdr workspace create --cwd "$selected" --label "$workspace_name" --focus >/dev/null 2>&1 || cd "$selected"
+      fi
+    elif [[ -n "$TMUX" ]]; then
+      # tmux内の場合 (移行完了まで併存)
       local current_session
       current_session=$(tmux display-message -p '#S')
-      if [[ "$current_session" == "$session_name" ]]; then
+      if [[ "$current_session" == "$workspace_name" ]]; then
         # すでにそのセッションにいる場合はcdを実行
         cd "$selected"
-      elif tmux has-session -t "$session_name" 2>/dev/null; then
-        tmux switch-client -t "$session_name"
+      elif tmux has-session -t "$workspace_name" 2>/dev/null; then
+        tmux switch-client -t "$workspace_name"
       else
-        tmux new-session -d -s "$session_name" -c "$selected"
-        tmux switch-client -t "$session_name"
+        tmux new-session -d -s "$workspace_name" -c "$selected"
+        tmux switch-client -t "$workspace_name"
       fi
     else
-      # tmux外の場合
-      if tmux has-session -t "$session_name" 2>/dev/null; then
-        tmux attach-session -t "$session_name"
-      else
-        tmux new-session -s "$session_name" -c "$selected"
-      fi
+      # multiplexer外の場合はcdのみ (herdrへは auto-attach で入る)
+      cd "$selected"
     fi
   fi
   zle reset-prompt
@@ -136,7 +157,7 @@ function fzf-ghq-widget() {
 zle -N fzf-ghq-widget
 bindkey '^]' fzf-ghq-widget
 
-# git worktree移動 + tmuxセッション/ウィンドウ
+# git worktree移動 + herdr workspace/tab / tmuxセッション/ウィンドウ
 function fzf-worktree-widget() {
   local selected worktree_path window_name session_name repo_root repo_name
   local worktrees
@@ -186,11 +207,34 @@ function fzf-worktree-widget() {
     [[ -z "$window_name" ]] && window_name=$(basename "$worktree_path" | tr '.' '_')
     # リポジトリのルートパスを取得（選択したworktreeから取得）
     repo_root=$(git -C "$worktree_path" worktree list | head -1 | awk '{print $1}')
-    # リポジトリ名をセッション名に
+    # リポジトリ名をworkspace/セッション名に
     repo_name=$(basename "$repo_root" | tr '.' '_')
     session_name="$repo_name"
 
-    if [[ -n "$TMUX" ]]; then
+    if [[ -n "$HERDR_ENV" ]]; then
+      # herdr内の場合: workspace = repo / tab = branch (案A)
+      local ws_id tab_id current_tab
+      ws_id=$(herdr workspace list 2>/dev/null | jq -r --arg l "$repo_name" '.result.workspaces[] | select(.label == $l) | .workspace_id' 2>/dev/null | head -1)
+      if [[ -z "$ws_id" ]]; then
+        # repo の workspace がなければ作成 (root tab は repo 直下)
+        ws_id=$(herdr workspace create --cwd "$repo_root" --label "$repo_name" --no-focus 2>/dev/null | jq -r '.result.workspace.workspace_id // empty' 2>/dev/null)
+      fi
+      if [[ -n "$ws_id" ]]; then
+        tab_id=$(herdr tab list --workspace "$ws_id" 2>/dev/null | jq -r --arg l "$window_name" '.result.tabs[] | select(.label == $l) | .tab_id' 2>/dev/null | head -1)
+        current_tab=$(herdr pane get "$HERDR_PANE_ID" 2>/dev/null | jq -r '.result.pane.tab_id // empty' 2>/dev/null)
+        if [[ -n "$tab_id" && "$tab_id" == "$current_tab" ]]; then
+          # すでにそのtabにいる場合はcdを実行
+          cd "$worktree_path"
+        elif [[ -n "$tab_id" ]]; then
+          herdr tab focus "$tab_id" >/dev/null 2>&1 || cd "$worktree_path"
+        else
+          herdr tab create --workspace "$ws_id" --cwd "$worktree_path" --label "$window_name" --focus >/dev/null 2>&1 || cd "$worktree_path"
+        fi
+      else
+        # workspace 解決失敗時はcdのみ (best-effort)
+        cd "$worktree_path"
+      fi
+    elif [[ -n "$TMUX" ]]; then
       # tmux内の場合
       local current_session current_window
       current_session=$(tmux display-message -p '#S')
@@ -224,18 +268,8 @@ function fzf-worktree-widget() {
         tmux switch-client -t "$session_name"
       fi
     else
-      # tmux外の場合
-      if tmux has-session -t "$session_name" 2>/dev/null; then
-        if tmux list-windows -t "$session_name" -F '#W' | grep -qxF "${window_name}"; then
-          tmux select-window -t "$session_name:$window_name"
-          tmux attach-session -t "$session_name"
-        else
-          tmux new-window -t "$session_name" -n "$window_name" -c "$worktree_path"
-          tmux attach-session -t "$session_name"
-        fi
-      else
-        tmux new-session -s "$session_name" -n "$window_name" -c "$worktree_path"
-      fi
+      # multiplexer外の場合はcdのみ (herdrへは auto-attach で入る)
+      cd "$worktree_path"
     fi
   fi
   zle reset-prompt
@@ -243,10 +277,10 @@ function fzf-worktree-widget() {
 zle -N fzf-worktree-widget
 bindkey '^w' fzf-worktree-widget
 
-# tmux auto-attach (loaded from functions directory)
-# To disable, add AUTO_TMUX=false to ~/.zsh/.zshrc_local
-autoload -Uz tmux-auto-attach
-tmux-auto-attach
+# herdr auto-attach (loaded from functions directory)
+# To disable, add AUTO_HERDR=false to ~/.zsh/.zshrc_local
+autoload -Uz herdr-auto-attach
+herdr-auto-attach
 
 fancy-ctrl-z () {
   if [[ $#BUFFER -eq 0 ]]; then

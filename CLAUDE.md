@@ -15,13 +15,15 @@ dotfiles/
 │   └── hooks/        # 個人 hooks (worktree-create.sh 等) ※ファイル単位で symlink
 ├── config/           # XDG_CONFIG_HOME 配下の設定
 │   ├── git/ignore    # グローバル gitignore
+│   ├── herdr/config.toml    # herdr 設定 (prefix: Ctrl+T; tmux からの移行先)
 │   ├── karabiner/    # Karabiner-Elements 設定 (macOS)
 │   ├── mise/config.toml    # ランタイム管理 (Go, Java, Node, Rust, CLI tools)
 │   ├── sheldon/plugins.toml # zsh プラグイン管理
 │   ├── starship.toml        # プロンプトテーマ
 │   ├── terminator/   # Terminator 設定 (Linux)
-│   ├── tmux/tmux.conf       # tmux 設定 (prefix: Ctrl+T)
+│   ├── tmux/tmux.conf       # tmux 設定 (併存期間中のみ。herdr へ移行中)
 │   └── zed/settings.json    # Zed エディタ設定 (macOS)
+├── docs/             # 設計・移行メモ (herdr-migration.md 等)
 ├── gitconfig         # Git グローバル設定
 ├── nvim/init.lua     # Neovim 設定 (lazy.nvim)
 ├── pbcopy            # pbcopy polyfill (Linux)
@@ -31,15 +33,12 @@ dotfiles/
 │   ├── install-neovim.sh    # Neovim インストーラ
 │   ├── install-tools-macos.sh # macOS ツールインストール
 │   ├── mise.toml            # mise タスク定義 (ghq等; メイン設定は config/mise/config.toml)
-│   ├── tmux-file-select     # FZF ファイルセレクター
-│   ├── tmux-git-switch      # FZF git ブランチスイッチャー
-│   ├── tmux-repo-switch     # FZF ghq リポジトリスイッチャー
-│   ├── tmux-switcher        # FZF tmux ウィンドウスイッチャー
-│   └── git-wt-tmux-hook.sh  # git-wt の tmux 連携 hook (作成/削除時に tmux window 操作)
+│   ├── git-wt-herdr-hook.sh # git-wt の herdr 連携 hook (作成/削除時に herdr tab 操作)
+│   └── git-wt-tmux-hook.sh  # git-wt の tmux 連携 hook (herdr 外のとき herdr hook から委譲される)
 ├── zsh/
 │   ├── .zshrc        # メインシェル設定
 │   ├── .zshrc_local  # マシン固有設定 (gitignore対象; Homebrew PATH, gcloud等)
-│   └── functions/    # カスタム関数 (tmux-auto-attach, yolo, _gh)
+│   └── functions/    # カスタム関数 (herdr-auto-attach, yolo, _gh)
 ├── zshenv            # 環境変数
 ├── ideavimrc         # IntelliJ IdeaVim 設定
 ├── keymap/           # キーマップ設定
@@ -56,7 +55,7 @@ dotfiles/
 bootstrap.sh が以下を実行:
 1. Linux の場合: build-essential, openssl, fzf, ripgrep 等をインストール
 2. Neovim インストール
-3. 各設定ファイルの symlink 作成 (~/.zsh, ~/.config/nvim, tmux, sheldon, mise, starship)
+3. 各設定ファイルの symlink 作成 (~/.zsh, ~/.config/nvim, herdr, tmux, sheldon, mise, starship)
 4. スクリプトを ~/.local/bin にインストール
 
 ## 変更時の注意事項
@@ -69,14 +68,16 @@ bootstrap.sh が以下を実行:
 
 ## 主要ツールと設定のポイント
 
-### tmux
-- prefix: `Ctrl+T`（デフォルトの Ctrl+B ではない）
-- vi-mode キーバインド
-- カスタムキー: `w`(FZF窓切替), `B`(ブランチ切替), `g`(ghq), `f`(ファイル検索), `F`(ツリー検索), `c`(Claude Code), `C`(新ウィンドウ)
+### herdr (マルチプレクサ。tmux から移行中: docs/herdr-migration.md)
+- prefix: `Ctrl+T`（tmux 時代を踏襲）
+- 案A「1段スライド」: workspace = repo / tab = branch・worktree / pane = 作業
+- pane 移動: Shift+矢印 / tab 移動: Alt+←→ / workspace 移動: Alt+↑↓
+- herdr 内検出は `$HERDR_ENV`、pane 識別は `$HERDR_PANE_ID`（widget/hook が利用）
+- tmux は併存期間中のみ残る（switcher 系スクリプトは全廃済み）
 
 ### zsh
-- FZF ウィジェット: `Ctrl+R`(履歴), `Ctrl+]`(ghq), `Ctrl+W`(worktree)
-- `git wt` コマンド: git worktree ヘルパー ([k1LoW/git-wt](https://github.com/k1LoW/git-wt)、mise で導入)。worktree 配置・tmux 連携・cd は git config (`wt.basedir`/`wt.hook`/`wt.deletehook`/`wt.nocd`) で制御。tmux 連携の実体は `script/git-wt-tmux-hook.sh`。マージ済み/gone ブランチの掃除は `git wtclean` (= `gh poi` + `git worktree prune`)
+- FZF ウィジェット: `Ctrl+R`(履歴), `Ctrl+]`(ghq → herdr workspace), `Ctrl+W`(worktree → herdr tab)
+- `git wt` コマンド: git worktree ヘルパー ([k1LoW/git-wt](https://github.com/k1LoW/git-wt)、mise で導入)。worktree 配置・multiplexer 連携・cd は git config (`wt.basedir`/`wt.hook`/`wt.deletehook`/`wt.nocd`) で制御。連携の実体は `script/git-wt-herdr-hook.sh` (herdr 外では `git-wt-tmux-hook.sh` へ委譲)。マージ済み/gone ブランチの掃除は `git wtclean` (= `gh poi` + `git worktree prune`)
 
 ### Neovim
 - lazy.nvim でプラグイン管理
@@ -85,6 +86,6 @@ bootstrap.sh が以下を実行:
 ## テスト方法
 
 設定変更後の確認:
-1. 新しい tmux セッションを開いて設定が反映されるか確認
+1. 新しいターミナルで herdr にアタッチし設定が反映されるか確認 (`herdr server reload-config` でも可)
 2. `sheldon lock` がエラーなく完了するか確認
 3. `mise doctor` で mise の状態を確認

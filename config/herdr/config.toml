@@ -1,0 +1,48 @@
+# herdr 設定 (config/tmux/tmux.conf からの案A「1段スライド」翻訳)
+# 対応: session=repo → workspace=repo / window=branch → tab=branch / pane は不変
+# ステータスバーの自由カスタマイズ (Powerline/branch名/battery 等) は喪失する割り切り (G2)
+
+# 初回起動の通知オンボーディングをスキップ
+onboarding = false
+
+[theme]
+# tmux 時代の nordtheme/tmux を組込みテーマで踏襲
+name = "nord"
+
+[terminal]
+# new_cwd = "follow" (デフォルト) が tmux の split-window -c "#{pane_current_path}" 相当
+
+[keys]
+# prefix は tmux 時代の Ctrl+T を踏襲
+# (Karabiner の ghostty-ime-off-on-ctrl-t.json が Ctrl+T で IME を切る前提もそのまま生きる)
+prefix = "ctrl+t"
+
+# pane 移動: tmux の Shift+矢印 direct binding を踏襲
+# (prefix+h/j/k/l は失われるが、navigate モード (prefix+g) 内の h/j/k/l は別途有効)
+focus_pane_left = "shift+left"
+focus_pane_down = "shift+down"
+focus_pane_up = "shift+up"
+focus_pane_right = "shift+right"
+
+# tab 移動: tmux の Alt+←/→ (window 移動) を踏襲
+previous_tab = "alt+left"
+next_tab = "alt+right"
+
+# workspace 移動: tmux の Alt+↑/↓ (session 移動) を踏襲
+previous_workspace = "alt+up"
+next_workspace = "alt+down"
+
+# 分割: prefix+minus (上下) はデフォルトのまま tmux の bind - と一致。
+# tmux の bind | (左右) は herdr のキー構文に pipe が無いためデフォルト prefix+v を使う。
+# split_vertical = "prefix+v"
+# split_horizontal = "prefix+minus"
+
+# workspace_picker = "prefix+w" (デフォルト) が tmux の bind w (switcher) の上位互換
+
+[ui]
+# tab 作成時の名前入力はスキップ (precmd の branch 名自動 rename に任せる。tmux の new-window と同じ挙動)
+prompt_new_tab_name = false
+
+# バックグラウンド workspace のエージェント状態変化を in-app toast で通知
+[ui.toast]
+delivery = "herdr"

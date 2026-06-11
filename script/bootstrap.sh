@@ -41,16 +41,27 @@ fi
 
 ln -sfv $ROOT/config/tmux/tmux.conf $HOME/.config/tmux/tmux.conf
 
+# herdr 設定 (tmux からの移行先。tmux は併存期間中のみ残る)
+if [ ! -d ~/.config/herdr ]; then
+  mkdir -p ~/.config/herdr
+  echo '~/.config/herdr was created'
+fi
+
+ln -sfv $ROOT/config/herdr/config.toml $HOME/.config/herdr/config.toml
+
 # スクリプトをパスに追加
 mkdir -p $HOME/.local/bin
 ln -sfv $ROOT/script/claude-status $HOME/.local/bin/claude-status
-ln -sfv $ROOT/script/tmux-switcher $HOME/.local/bin/tmux-switcher
-ln -sfv $ROOT/script/tmux-git-switch $HOME/.local/bin/tmux-git-switch
-ln -sfv $ROOT/script/tmux-repo-switch $HOME/.local/bin/tmux-repo-switch
-ln -sfv $ROOT/script/tmux-worktree-switch $HOME/.local/bin/tmux-worktree-switch
-ln -sfv $ROOT/script/tmux-file-select $HOME/.local/bin/tmux-file-select
-ln -sfv $ROOT/script/tmux-toggle-pane $HOME/.local/bin/tmux-toggle-pane
 ln -sfv $ROOT/script/git-wt-tmux-hook.sh $HOME/.local/bin/git-wt-tmux-hook.sh
+ln -sfv $ROOT/script/git-wt-herdr-hook.sh $HOME/.local/bin/git-wt-herdr-hook.sh
+
+# 廃止した tmux switcher 系の残存 symlink を掃除 (herdr 移行で全廃)
+rm -f $HOME/.local/bin/tmux-switcher \
+      $HOME/.local/bin/tmux-git-switch \
+      $HOME/.local/bin/tmux-repo-switch \
+      $HOME/.local/bin/tmux-worktree-switch \
+      $HOME/.local/bin/tmux-file-select \
+      $HOME/.local/bin/tmux-toggle-pane
 
 if [ ! -d ~/.config/alacritty ]; then
   mkdir -p ~/.config/alacritty
@@ -159,11 +170,6 @@ if ! command -v mise &> /dev/null; then
   curl https://mise.run | sh
 fi
 
-# tmux plugin manager
-if [ ! -d ~/.tmux/plugins/tpm ]; then
-  git clone https://github.com/tmux-plugins/tpm ~/.tmux/plugins/tpm
-fi
-
 # 言語・ツールのインストール (config/mise/config.toml に定義済み)
 mise install -y
 
@@ -176,11 +182,12 @@ git config --global user.email "rsakaguchi3125@gmail.com"
 git config --global ghq.root $HOME/src
 
 # git-wt (git worktree ヘルパー) のグローバル設定
-# worktree 配置を <repo親>/worktree/<repo名>/<branch> に揃え、tmux 連携 hook を登録する。
+# worktree 配置を <repo親>/worktree/<repo名>/<branch> に揃え、herdr 連携 hook を登録する。
+# (herdr hook は herdr 外だと tmux hook へ委譲するので併存期間も両対応)
 # いずれも set (--add ではない) なので bootstrap 再実行でも重複しない。
 git config --global wt.basedir "../worktree/{gitroot}"
 git config --global wt.nocd create
-git config --global wt.hook "$HOME/.local/bin/git-wt-tmux-hook.sh add"
-git config --global wt.deletehook "$HOME/.local/bin/git-wt-tmux-hook.sh delete"
+git config --global wt.hook "$HOME/.local/bin/git-wt-herdr-hook.sh add"
+git config --global wt.deletehook "$HOME/.local/bin/git-wt-herdr-hook.sh delete"
 # マージ済み/gone ブランチの掃除 (旧 wt clean の代替): gh poi + worktree prune
 git config --global alias.wtclean "!gh poi && git worktree prune"
