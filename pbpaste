@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+if [[ "$(uname -s)" == "Darwin" && -x /usr/bin/pbpaste ]]; then
+  exec /usr/bin/pbpaste "$@"
+elif command -v win32yank.exe &>/dev/null; then
+  exec win32yank.exe -o --lf
+elif command -v powershell.exe &>/dev/null; then
+  set +e
+  powershell.exe -NoLogo -NoProfile -Command Get-Clipboard | sed 's/\r$//'
+  status="${PIPESTATUS[0]}"
+  set -e
+  exit "$status"
+elif command -v wl-paste &>/dev/null; then
+  exec wl-paste "$@"
+elif command -v xclip &>/dev/null; then
+  exec xclip -selection clipboard -out "$@"
+elif command -v xsel &>/dev/null; then
+  exec xsel --clipboard --output "$@"
+fi
+
+echo "pbpaste: no clipboard provider found" >&2
+exit 1

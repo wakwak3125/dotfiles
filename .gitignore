@@ -7,6 +7,8 @@ zsh/.zsh_local
 zsh/.zsh_sessions
 *.backup
 zsh/.zcompcache
+zsh/zsh
+nvim/nvim
 .worktrees/
 claude/skills/*/node_modules/
 claude/skills/sentry-cli/
