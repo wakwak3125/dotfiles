@@ -4,6 +4,19 @@
 # Excludes: VSCode, JetBrains IDEs
 
 herdr-auto-attach() {
+  local is_wsl=false
+  if [[ -n "${WSL_DISTRO_NAME:-}" || -n "${WSL_INTEROP:-}" ]]; then
+    is_wsl=true
+  elif [[ -r /proc/sys/kernel/osrelease ]] && grep -qiE 'microsoft|wsl' /proc/sys/kernel/osrelease; then
+    is_wsl=true
+  fi
+
+  # WSL は Windows 側ターミナルから起動されるため、multiplexer の自動 exec はデフォルトで避ける。
+  # 必要な場合は ~/.zsh/.zshrc_local で AUTO_HERDR=true を明示する。
+  if [[ -z "${AUTO_HERDR+x}" && "$is_wsl" == "true" ]]; then
+    return 0
+  fi
+
   # 設定: herdr自動起動を有効にするか（~/.zshrc_localで上書き可能）
   local AUTO_HERDR="${AUTO_HERDR:-true}"
 

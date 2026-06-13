@@ -21,3 +21,4 @@ Common config symlinks for zsh, Neovim, tmux, herdr, sheldon, mise, starship, gi
 - WezTerm is expected to be installed and configured on Windows, so this repository does not manage WezTerm config.
 - `script/wsl.sh` installs WSL-side CLI dependencies with `apt-get` and links `pbcopy`/`pbpaste` to Windows clipboard providers when available.
 - Neovim uses `win32yank.exe` when present, otherwise falls back to `clip.exe` and PowerShell for clipboard integration.
+- `herdr` auto attach is disabled by default on WSL. Add `AUTO_HERDR=true` to `~/.zsh/.zshrc_local` only after confirming it works in your Windows terminal.

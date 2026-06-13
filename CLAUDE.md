@@ -66,6 +66,7 @@ bootstrap.sh が以下を実行:
 - Windows 側の WezTerm 設定は dotfiles 管理外。WSL 内の zsh/tmux/nvim/mise 等だけを管理する。
 - repo は `/mnt/c` 配下ではなく WSL filesystem 配下に置く。
 - clipboard は `win32yank.exe` があれば Neovim が優先利用し、なければ `clip.exe`/PowerShell に fallback する。
+- WSL では Windows 側ターミナル起動時の失敗を避けるため `herdr` auto attach はデフォルト無効。必要なら `~/.zsh/.zshrc_local` に `AUTO_HERDR=true` を置く。
 
 ## 変更時の注意事項
 
