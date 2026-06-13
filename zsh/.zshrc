@@ -6,14 +6,26 @@ fpath=(
 )
 
 ## Env
-eval "$(sheldon source)"
-eval "$(~/.local/bin/mise activate zsh)"
-eval "$(direnv hook zsh)"
+command -v sheldon >/dev/null 2>&1 && eval "$(sheldon source)"
+_mise_bin=""
+if [[ -x "$HOME/.local/bin/mise" ]]; then
+  _mise_bin="$HOME/.local/bin/mise"
+elif command -v mise >/dev/null 2>&1; then
+  _mise_bin="mise"
+fi
+if [[ -n "$_mise_bin" ]]; then
+  eval "$("$_mise_bin" activate zsh)"
+fi
+command -v direnv >/dev/null 2>&1 && eval "$(direnv hook zsh)"
 # git-wt: git worktree ヘルパー。git() ラッパー関数と補完を有効化 (未インストール時はスキップ)
 command -v git-wt >/dev/null 2>&1 && eval "$(git-wt --init zsh)"
-export JAVA_HOME="$(mise where java)"
+if [[ -n "$_mise_bin" ]]; then
+  JAVA_HOME="$("$_mise_bin" where java 2>/dev/null || true)"
+  [[ -n "$JAVA_HOME" ]] && export JAVA_HOME
+fi
+unset _mise_bin
 
-source $ZDOTDIR/.zshrc_local
+[[ -f "$ZDOTDIR/.zshrc_local" ]] && source "$ZDOTDIR/.zshrc_local"
 
 bindkey -e
 autoload -Uz add-zsh-hook
@@ -32,6 +44,8 @@ function _mux_update_window_name() {
     name="${PWD##*/}"
   fi
   if [[ -n "$HERDR_ENV" ]]; then
+    command -v herdr >/dev/null 2>&1 || return
+    command -v jq >/dev/null 2>&1 || return
     # tab_id は pane 生存中不変なので初回のみ逆引きしてキャッシュ。
     # rename は前回値と変わったときだけ送り precmd 毎の socket 往復を避ける
     if [[ -z "$_HERDR_TAB_ID" ]]; then
@@ -97,7 +111,7 @@ function tmux-kill-all() {
 }
 
 # starship prompt
-eval "$(starship init zsh)"
+command -v starship >/dev/null 2>&1 && eval "$(starship init zsh)"
 
 ## fzf widgets (replacing anyframe)
 # 履歴検索

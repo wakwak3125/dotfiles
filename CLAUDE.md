@@ -2,8 +2,9 @@
 
 ## 概要
 
-macOS / Linux 両対応の dotfiles リポジトリ。
+macOS / WSL2/Linux 両対応の dotfiles リポジトリ。
 シェル、エディタ、ターミナル、開発ツールの設定を一元管理する。
+Windows 側ターミナル (WezTerm 等) の設定はこのリポジトリでは管理せず、WSL 内の CLI 環境を対象にする。
 
 ## ディレクトリ構成
 
@@ -26,12 +27,15 @@ dotfiles/
 ├── docs/             # 設計・移行メモ (herdr-migration.md 等)
 ├── gitconfig         # Git グローバル設定
 ├── nvim/init.lua     # Neovim 設定 (lazy.nvim)
-├── pbcopy            # pbcopy polyfill (Linux)
+├── pbcopy            # pbcopy polyfill (Linux/WSL)
+├── pbpaste           # pbpaste polyfill (Linux/WSL)
 ├── script/           # インストール・ユーティリティスクリプト
 │   ├── bootstrap.sh  # 初期セットアップ (symlink 作成含む)
 │   ├── claude-status # Claude Code ダッシュボード
 │   ├── install-neovim.sh    # Neovim インストーラ
-│   ├── install-tools-macos.sh # macOS ツールインストール
+│   ├── macos.sh             # macOS 専用セットアップ (Homebrew, GUI app config 等)
+│   ├── wsl.sh               # WSL2/Linux 専用セットアップ (apt, WSL 補助ツール等)
+│   ├── install-tools-macos.sh # macos.sh への互換ラッパー
 │   ├── mise.toml            # mise タスク定義 (ghq等; メイン設定は config/mise/config.toml)
 │   ├── git-wt-herdr-hook.sh # git-wt の herdr 連携 hook (作成/削除時に herdr tab 操作)
 │   └── git-wt-tmux-hook.sh  # git-wt の tmux 連携 hook (herdr 外のとき herdr hook から委譲される)
@@ -53,10 +57,15 @@ dotfiles/
 ```
 
 bootstrap.sh が以下を実行:
-1. Linux の場合: build-essential, openssl, fzf, ripgrep 等をインストール
+1. OS 判定後、macOS は `script/macos.sh`、WSL2/Linux は `script/wsl.sh` を実行
 2. Neovim インストール
 3. 各設定ファイルの symlink 作成 (~/.zsh, ~/.config/nvim, herdr, tmux, sheldon, mise, starship)
 4. スクリプトを ~/.local/bin にインストール
+
+### WSL2
+- Windows 側の WezTerm 設定は dotfiles 管理外。WSL 内の zsh/tmux/nvim/mise 等だけを管理する。
+- repo は `/mnt/c` 配下ではなく WSL filesystem 配下に置く。
+- clipboard は `win32yank.exe` があれば Neovim が優先利用し、なければ `clip.exe`/PowerShell に fallback する。
 
 ## 変更時の注意事項
 

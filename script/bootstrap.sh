@@ -1,131 +1,132 @@
-#! /bin/bash
+#!/usr/bin/env bash
 
-cd `dirname $0`
-ROOT=`dirname $(pwd)`
-CONFIG_DIR='~/.config'
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+OS="$(uname -s)"
+
+is_wsl() {
+  [[ -n "${WSL_DISTRO_NAME:-}" || -n "${WSL_INTEROP:-}" ]] && return 0
+  [[ -r /proc/sys/kernel/osrelease ]] && grep -qiE 'microsoft|wsl' /proc/sys/kernel/osrelease
+}
+
+ensure_dir() {
+  local dir="$1"
+  if [[ ! -d "$dir" ]]; then
+    mkdir -p "$dir"
+    echo "$dir was created"
+  fi
+}
+
+link_file() {
+  local src="$1"
+  local dest="$2"
+  if [[ ! -e "$src" ]]; then
+    echo "==> WARN: $src not found, skipping $dest" >&2
+    return 0
+  fi
+  ensure_dir "$(dirname "$dest")"
+  ln -sfv "$src" "$dest"
+}
+
+link_dir() {
+  local src="$1"
+  local dest="$2"
+  if [[ ! -d "$src" ]]; then
+    echo "==> WARN: $src not found, skipping $dest" >&2
+    return 0
+  fi
+  ensure_dir "$(dirname "$dest")"
+  ln -sfnv "$src" "$dest"
+}
+
+run_platform_setup() {
+  case "$OS" in
+    Darwin)
+      bash "$ROOT/script/macos.sh"
+      ;;
+    Linux)
+      if is_wsl; then
+        bash "$ROOT/script/wsl.sh"
+      else
+        echo "==> Linux detected outside WSL; applying WSL-compatible Linux setup"
+        bash "$ROOT/script/wsl.sh"
+      fi
+      ;;
+    *)
+      echo "==> WARN: unsupported OS: $OS. Running common setup only." >&2
+      ;;
+  esac
+}
+
+run_platform_setup
 
 # ================================================
-# sudo が必要な処理をまとめて最初に実行
+# 共通 symlink
 # ================================================
-if [ "$(uname)" != "Darwin" ]; then
-  echo "==> Installing system packages (sudo required)..."
-  sudo apt update
-  sudo apt install -y \
-    build-essential \
-    openssl \
-    libssl-dev \
-    pkg-config \
-    fzf \
-    jq \
-    ripgrep \
-    xdg-utils
+link_file "$ROOT/ideavimrc" "$HOME/.ideavimrc"
+link_file "$ROOT/obsidian.vimrc" "$HOME/.obsidian.vimrc"
+link_dir "$ROOT/zsh" "$HOME/.zsh"
+link_file "$ROOT/zshenv" "$HOME/.zshenv"
+link_dir "$ROOT/nvim" "$HOME/.config/nvim"
+
+link_file "$ROOT/config/tmux/tmux.conf" "$HOME/.config/tmux/tmux.conf"
+link_file "$ROOT/config/herdr/config.toml" "$HOME/.config/herdr/config.toml"
+link_file "$ROOT/config/sheldon/plugins.toml" "$HOME/.config/sheldon/plugins.toml"
+link_file "$ROOT/config/mise/config.toml" "$HOME/.config/mise/config.toml"
+link_file "$ROOT/config/starship.toml" "$HOME/.config/starship.toml"
+link_file "$ROOT/config/git/ignore" "$HOME/.config/git/ignore"
+
+# Linux/WSL 用 pbcopy/pbpaste polyfill。macOS の /usr/bin/pbcopy は上書きしない。
+if [[ "$OS" != "Darwin" ]]; then
+  ensure_dir "$HOME/.local/bin"
+  link_file "$ROOT/pbcopy" "$HOME/.local/bin/pbcopy"
+  link_file "$ROOT/pbpaste" "$HOME/.local/bin/pbpaste"
 fi
-
-# Neovimのインストール（sudo が必要）
-$ROOT/script/install-neovim.sh
-
-# ================================================
-# シンボリックリンクの作成
-# ================================================
-ln -sfv $ROOT/ideavimrc $HOME/.ideavimrc
-ln -sfv $ROOT/obsidian.vimrc $HOME/.obsidian.vimrc
-# ディレクトリ向け symlink は -n を付けないと既存 link を辿って中にネストを作る
-ln -sfnv $ROOT/zsh $HOME/.zsh
-ln -sfv $ROOT/zshenv $HOME/.zshenv
-ln -sfnv $ROOT/nvim $HOME/.config/nvim
-
-if [ ! -d ~/.config/tmux ]; then
-  mkdir -p ~/.config/tmux
-  echo '~/.config/tmux was created'
-fi
-
-ln -sfv $ROOT/config/tmux/tmux.conf $HOME/.config/tmux/tmux.conf
-
-# herdr 設定 (tmux からの移行先。tmux は併存期間中のみ残る)
-if [ ! -d ~/.config/herdr ]; then
-  mkdir -p ~/.config/herdr
-  echo '~/.config/herdr was created'
-fi
-
-ln -sfv $ROOT/config/herdr/config.toml $HOME/.config/herdr/config.toml
 
 # スクリプトをパスに追加
-mkdir -p $HOME/.local/bin
-ln -sfv $ROOT/script/claude-status $HOME/.local/bin/claude-status
-ln -sfv $ROOT/script/git-wt-tmux-hook.sh $HOME/.local/bin/git-wt-tmux-hook.sh
-ln -sfv $ROOT/script/git-wt-herdr-hook.sh $HOME/.local/bin/git-wt-herdr-hook.sh
+ensure_dir "$HOME/.local/bin"
+link_file "$ROOT/script/claude-status" "$HOME/.local/bin/claude-status"
+link_file "$ROOT/script/git-wt-tmux-hook.sh" "$HOME/.local/bin/git-wt-tmux-hook.sh"
+link_file "$ROOT/script/git-wt-herdr-hook.sh" "$HOME/.local/bin/git-wt-herdr-hook.sh"
 
 # 廃止した tmux switcher 系の残存 symlink を掃除 (herdr 移行で全廃)
-rm -f $HOME/.local/bin/tmux-switcher \
-      $HOME/.local/bin/tmux-git-switch \
-      $HOME/.local/bin/tmux-repo-switch \
-      $HOME/.local/bin/tmux-worktree-switch \
-      $HOME/.local/bin/tmux-file-select \
-      $HOME/.local/bin/tmux-toggle-pane
+rm -f "$HOME/.local/bin/tmux-switcher" \
+      "$HOME/.local/bin/tmux-git-switch" \
+      "$HOME/.local/bin/tmux-repo-switch" \
+      "$HOME/.local/bin/tmux-worktree-switch" \
+      "$HOME/.local/bin/tmux-file-select" \
+      "$HOME/.local/bin/tmux-toggle-pane"
 
-if [ ! -d ~/.config/alacritty ]; then
-  mkdir -p ~/.config/alacritty
-  echo '~/.config/alacritty was created'
-fi
-
-ln -sfv $ROOT/config/alacritty/alacritty.yml $HOME/.config/alacritty/alacritty.yml
-
-if [ ! -d ~/.config/sheldon ]; then
-  mkdir -p ~/.config/sheldon
-  echo '~/.config/sheldon was created'
-fi
-
-ln -sfv $ROOT/config/sheldon/plugins.toml $HOME/.config/sheldon/plugins.toml
-
-if [ ! -d ~/.config/mise ]; then
-  mkdir -p ~/.config/mise
-  echo '~/.config/mise was created'
-fi
-
-ln -sfv $ROOT/config/mise/config.toml $HOME/.config/mise/config.toml
-
-ln -sfv $ROOT/config/starship.toml $HOME/.config/starship.toml
-
-if [ ! -d ~/.config/git ]; then
-  mkdir -p ~/.config/git
-  echo '~/.config/git was created'
-fi
-
-ln -sfv $ROOT/config/git/ignore $HOME/.config/git/ignore
-
-# Claude Code 個人 skills
-if [ ! -d ~/.claude ]; then
-  mkdir -p ~/.claude
-  echo '~/.claude was created'
-fi
+# ================================================
+# Claude Code 個人設定
+# ================================================
+ensure_dir "$HOME/.claude"
 
 # `-n` を付けないと既存の symlink を辿って中にリンクを作ってしまう
-if [ ! -L ~/.claude/skills ]; then
-  rm -rf ~/.claude/skills
+if [[ ! -L "$HOME/.claude/skills" ]]; then
+  rm -rf "$HOME/.claude/skills"
 fi
-ln -sfnv $ROOT/claude/skills $HOME/.claude/skills
+link_dir "$ROOT/claude/skills" "$HOME/.claude/skills"
 
-# Claude Code 個人 agents
-if [ ! -L ~/.claude/agents ]; then
-  rm -rf ~/.claude/agents
+if [[ ! -L "$HOME/.claude/agents" ]]; then
+  rm -rf "$HOME/.claude/agents"
 fi
-ln -sfnv $ROOT/claude/agents $HOME/.claude/agents
+link_dir "$ROOT/claude/agents" "$HOME/.claude/agents"
 
 # Claude Code フックスクリプト (ディレクトリは symlink にしない: nono など外部ツールが配置するファイルと共存させる)
-if [ ! -d ~/.claude/hooks ]; then
-  mkdir -p ~/.claude/hooks
-  echo '~/.claude/hooks was created'
-fi
-ln -sfv $ROOT/claude/hooks/worktree-create.sh $HOME/.claude/hooks/worktree-create.sh
+ensure_dir "$HOME/.claude/hooks"
+link_file "$ROOT/claude/hooks/worktree-create.sh" "$HOME/.claude/hooks/worktree-create.sh"
 
-# Claude Code org 単位の CLAUDE.md (claude/orgs/<org>.CLAUDE.md → ~/src/github.com/<org>/CLAUDE.md)
+# Claude Code org 単位の CLAUDE.md (claude/orgs/<org>.CLAUDE.md -> ~/src/github.com/<org>/CLAUDE.md)
 # claude/orgs/ は gitignore 対象 (会社固有情報を含むため)。ファイルがあるマシンでのみ symlink を張る
-if [ -d "$ROOT/claude/orgs" ]; then
+if [[ -d "$ROOT/claude/orgs" ]]; then
   for org_md in "$ROOT"/claude/orgs/*.CLAUDE.md; do
-    [ -f "$org_md" ] || continue
-    org=$(basename "$org_md" .CLAUDE.md)
-    if [ -d "$HOME/src/github.com/$org" ]; then
-      ln -sfv "$org_md" "$HOME/src/github.com/$org/CLAUDE.md"
+    [[ -f "$org_md" ]] || continue
+    org="$(basename "$org_md" .CLAUDE.md)"
+    if [[ -d "$HOME/src/github.com/$org" ]]; then
+      link_file "$org_md" "$HOME/src/github.com/$org/CLAUDE.md"
     fi
   done
 fi
@@ -133,56 +134,50 @@ fi
 # Claude Code settings.json に WorktreeCreate フック設定をマージ
 # settings.json は API キー等の機密混在のため symlink せず、jq でこのキーだけ書き換える
 CLAUDE_SETTINGS="$HOME/.claude/settings.json"
-if ! command -v jq &> /dev/null; then
+if ! command -v jq &>/dev/null; then
   echo "==> WARN: jq not found, skipping settings.json merge. Install jq and re-run, or add the WorktreeCreate hook manually." >&2
 else
-  if [ ! -f "$CLAUDE_SETTINGS" ]; then
+  if [[ ! -f "$CLAUDE_SETTINGS" ]]; then
     echo '{}' > "$CLAUDE_SETTINGS"
     echo "$CLAUDE_SETTINGS was created"
   fi
-  CLAUDE_SETTINGS_TMP=$(mktemp)
+  CLAUDE_SETTINGS_TMP="$(mktemp)"
   jq '.hooks.WorktreeCreate = [{"hooks":[{"type":"command","command":"$HOME/.claude/hooks/worktree-create.sh"}]}]' \
     "$CLAUDE_SETTINGS" > "$CLAUDE_SETTINGS_TMP" \
     && mv "$CLAUDE_SETTINGS_TMP" "$CLAUDE_SETTINGS" \
     && echo "==> Merged WorktreeCreate hook into $CLAUDE_SETTINGS"
 fi
 
-if [ ! -d ~/.config/zed ]; then
-  mkdir -p ~/.config/zed
-  echo '~/.config/zed was created'
-fi
-
-ln -sfv $ROOT/config/zed/settings.json $HOME/.config/zed/settings.json
-
-if [ "$(uname)" == "Darwin" ]; then
-  if [ ! -d ~/.config/karabiner/assets/complex_modifications ]; then
-    mkdir -p ~/.config/karabiner/assets/complex_modifications
-    echo '~/.config/karabiner/assets/complex_modifications was created'
-  fi
-
-  ln -sfv $ROOT/config/karabiner/assets/complex_modifications/ghostty-ime-off-on-ctrl-t.json $HOME/.config/karabiner/assets/complex_modifications/ghostty-ime-off-on-ctrl-t.json
-fi
-
 # ================================================
 # ツールのインストール
 # ================================================
-if ! command -v mise &> /dev/null; then
+bash "$ROOT/script/install-neovim.sh"
+
+if ! command -v mise &>/dev/null && [[ ! -x "$HOME/.local/bin/mise" ]]; then
   curl https://mise.run | sh
 fi
 
-# 言語・ツールのインストール (config/mise/config.toml に定義済み)
-mise install -y
+MISE_BIN="$(command -v mise || true)"
+if [[ -z "$MISE_BIN" && -x "$HOME/.local/bin/mise" ]]; then
+  MISE_BIN="$HOME/.local/bin/mise"
+fi
+
+if [[ -n "$MISE_BIN" ]]; then
+  "$MISE_BIN" install -y
+else
+  echo "==> WARN: mise not found, skipping mise install" >&2
+fi
 
 # 旧 wt (自前 Go 製) は git-wt へ移行済み。残存バイナリがあれば削除する
-rm -f $HOME/.local/bin/wt
+rm -f "$HOME/.local/bin/wt"
 
 # gitの設定
 git config --global user.name "Ryo Sakaguchi"
 git config --global user.email "rsakaguchi3125@gmail.com"
-git config --global ghq.root $HOME/src
+git config --global ghq.root "$HOME/src"
 
 # git-wt (git worktree ヘルパー) のグローバル設定
-# worktree 配置を <repo親>/worktree/<repo名>/<branch> に揃え、herdr 連携 hook を登録する。
+# worktree 配置を <repo親>/worktree/<repo名> に揃え、herdr 連携 hook を登録する。
 # (herdr hook は herdr 外だと tmux hook へ委譲するので併存期間も両対応)
 # いずれも set (--add ではない) なので bootstrap 再実行でも重複しない。
 git config --global wt.basedir "../worktree/{gitroot}"

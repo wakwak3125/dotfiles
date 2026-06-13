@@ -1,4 +1,6 @@
-export ZDOTDIR=$HOME/.zsh
+export ZDOTDIR="$HOME/.zsh"
 
 # sentry
-fpath=("/Users/wakwak/.local/share/zsh/site-functions" $fpath)
+if [[ -d "$HOME/.local/share/zsh/site-functions" ]]; then
+  fpath=("$HOME/.local/share/zsh/site-functions" $fpath)
+fi
