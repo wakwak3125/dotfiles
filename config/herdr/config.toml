@@ -44,5 +44,6 @@ split_vertical = "prefix+|"
 prompt_new_tab_name = false
 
 # バックグラウンド workspace のエージェント状態変化を in-app toast で通知
+agent_panel_scope = "all"
 [ui.toast]
 delivery = "herdr"
