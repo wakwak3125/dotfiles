@@ -17,7 +17,7 @@
     [
       { "id": "20", "type": "block-timer", "color": "brightBlack" },
       { "id": "21", "type": "separator" },
-      { "id": "22", "type": "weekly-opus-usage", "color": "brightMagenta" },
+      { "id": "22", "type": "weekly-usage", "color": "brightMagenta" },
       { "id": "23", "type": "separator" },
       { "id": "24", "type": "weekly-reset-timer", "color": "brightBlack" },
       { "id": "25", "type": "separator" },
