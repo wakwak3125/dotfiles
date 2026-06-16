@@ -125,6 +125,7 @@ link_common_config() {
   link_file "$ROOT/config/sheldon/plugins.toml" "$HOME/.config/sheldon/plugins.toml"
   link_file "$ROOT/config/mise/config.toml" "$HOME/.config/mise/config.toml"
   link_file "$ROOT/config/starship.toml" "$HOME/.config/starship.toml"
+  link_file "$ROOT/config/ccstatusline/settings.json" "$HOME/.config/ccstatusline/settings.json"
   link_file "$ROOT/config/git/ignore" "$HOME/.config/git/ignore"
 }
 
@@ -201,10 +202,12 @@ merge_claude_settings() {
     echo "$claude_settings was created"
   fi
   claude_settings_tmp="$(mktemp)"
-  jq '.hooks.WorktreeCreate = [{"hooks":[{"type":"command","command":"$HOME/.claude/hooks/worktree-create.sh"}]}]' \
+  # WorktreeCreate フックと ccstatusline (mise shim 経由) のステータスラインをマージ
+  jq '.hooks.WorktreeCreate = [{"hooks":[{"type":"command","command":"$HOME/.claude/hooks/worktree-create.sh"}]}]
+      | .statusLine = {"type":"command","command":"$HOME/.local/share/mise/shims/ccstatusline","padding":0}' \
     "$claude_settings" > "$claude_settings_tmp"
   mv "$claude_settings_tmp" "$claude_settings"
-  echo "==> Merged WorktreeCreate hook into $claude_settings"
+  echo "==> Merged WorktreeCreate hook and ccstatusline statusLine into $claude_settings"
 }
 
 install_mise() {

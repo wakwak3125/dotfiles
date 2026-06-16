@@ -16,6 +16,7 @@ dotfiles/
 │   └── hooks/        # 個人 hooks (worktree-create.sh 等) ※ファイル単位で symlink
 ├── config/           # XDG_CONFIG_HOME 配下の設定
 │   ├── git/ignore    # グローバル gitignore
+│   ├── ccstatusline/settings.json # Claude Code ステータスライン (mise: npm:ccstatusline 経由)
 │   ├── herdr/config.toml    # herdr 設定 (prefix: Ctrl+T; tmux からの移行先)
 │   ├── karabiner/    # Karabiner-Elements 設定 (macOS)
 │   ├── mise/config.toml    # ランタイム管理 (Go, Java, Node, Rust, CLI tools)

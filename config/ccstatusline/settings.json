@@ -1,0 +1,38 @@
+{
+  "version": 3,
+  "lines": [
+    [
+      { "id": "1", "type": "model", "color": "cyan" },
+      { "id": "2", "type": "separator" },
+      { "id": "3", "type": "thinking-effort", "color": "yellow" },
+      { "id": "4", "type": "separator" },
+      { "id": "5", "type": "context-bar", "color": "green" },
+      { "id": "6", "type": "separator" },
+      { "id": "7", "type": "worktree-name", "color": "blue" },
+      { "id": "8", "type": "separator" },
+      { "id": "9", "type": "git-branch", "color": "magenta" },
+      { "id": "10", "type": "separator" },
+      { "id": "11", "type": "git-changes", "color": "yellow" }
+    ],
+    [
+      { "id": "20", "type": "block-timer", "color": "brightBlack" },
+      { "id": "21", "type": "separator" },
+      { "id": "22", "type": "weekly-opus-usage", "color": "brightMagenta" },
+      { "id": "23", "type": "separator" },
+      { "id": "24", "type": "weekly-reset-timer", "color": "brightBlack" },
+      { "id": "25", "type": "separator" },
+      { "id": "26", "type": "session-clock", "color": "brightBlack" },
+      { "id": "27", "type": "separator" },
+      { "id": "28", "type": "compaction-counter", "color": "brightBlack" }
+    ],
+    []
+  ],
+  "flexMode": "full-minus-40",
+  "compactThreshold": 60,
+  "colorLevel": 2,
+  "inheritSeparatorColors": false,
+  "globalBold": false,
+  "gitCacheTtlSeconds": 5,
+  "minimalistMode": false,
+  "powerline": { "enabled": false, "separators": [""], "separatorInvertBackground": [false], "startCaps": [], "endCaps": [], "autoAlign": false, "continueThemeAcrossLines": false }
+}
