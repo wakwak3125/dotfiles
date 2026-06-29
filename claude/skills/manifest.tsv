@@ -1,0 +1,4 @@
+# skill_path	agents
+claude/skills/autopilot/SKILL.md	claude-code
+claude/skills/dev-task/SKILL.md	claude-code,codex
+claude/skills/spec-planner/SKILL.md	claude-code

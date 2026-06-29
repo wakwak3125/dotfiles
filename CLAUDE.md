@@ -10,9 +10,10 @@ Windows 側ターミナル (WezTerm 等) の設定はこのリポジトリでは
 
 ```
 dotfiles/
-├── claude/           # Claude Code 関連 (~/.claude/ 配下に symlink)
-│   ├── skills/       # 個人 skills (spec-planner-plan, spec-planner-revise 等)
-│   ├── agents/       # 個人 subagent 定義 (spec-planner-*, japan-{ehr,receipt}-* 等)
+├── claude/           # Claude Code / Codex 向け agent 資産
+│   ├── skills/       # 個人 skills (`gh skill` で Claude Code / Codex に install)
+│   │   └── manifest.tsv # skill ごとの install 先 agent 定義
+│   ├── agents/       # Claude Code subagent 定義 (spec-planner-*, japan-{ehr,receipt}-* 等)
 │   └── hooks/        # 個人 hooks (worktree-create.sh 等) ※ファイル単位で symlink
 ├── config/           # XDG_CONFIG_HOME 配下の設定
 │   ├── git/ignore    # グローバル gitignore
@@ -31,8 +32,9 @@ dotfiles/
 ├── pbcopy            # pbcopy polyfill (Linux/WSL)
 ├── pbpaste           # pbpaste polyfill (Linux/WSL)
 ├── script/           # インストール・ユーティリティスクリプト
-│   ├── bootstrap.sh  # 初期セットアップ (symlink 作成含む)
+│   ├── bootstrap.sh  # 初期セットアップ (symlink 作成、gh skill install 含む)
 │   ├── claude-status # Claude Code ダッシュボード
+│   ├── install-agent-skills.sh # `gh skill` による個人 skills インストール
 │   ├── install-neovim.sh    # Neovim インストーラ
 │   ├── macos.sh             # macOS 専用セットアップ (Homebrew, GUI app config 等)
 │   ├── wsl.sh               # WSL2/Linux 専用セットアップ (apt, WSL 補助ツール等)
@@ -59,9 +61,10 @@ dotfiles/
 
 bootstrap.sh が以下を実行:
 1. OS 判定後、macOS は `script/macos.sh`、WSL2/Linux は `script/wsl.sh` を実行
-2. Neovim インストール
-3. 各設定ファイルの symlink 作成 (~/.zsh, ~/.config/nvim, herdr, tmux, sheldon, mise, starship)
-4. スクリプトを ~/.local/bin にインストール
+2. 各設定ファイルの symlink 作成 (~/.zsh, ~/.config/nvim, herdr, tmux, sheldon, mise, starship)
+3. スクリプトを ~/.local/bin にインストール
+4. Claude Code agents/hooks を symlink、skills を `gh skill` で Claude Code / Codex にインストール
+5. Neovim / mise tool / Git global config をセットアップ
 
 ### WSL2
 - Windows 側の WezTerm 設定は dotfiles 管理外。WSL 内の zsh/tmux/nvim/mise 等だけを管理する。
@@ -71,7 +74,7 @@ bootstrap.sh が以下を実行:
 ## 変更時の注意事項
 
 - **OS 分岐**: `.zshrc` や `bootstrap.sh` に macOS/Linux の条件分岐あり。片方だけ壊さないよう注意
-- **symlink**: 設定ファイルは symlink で管理。直接 `~/.config/` を編集しない
+- **symlink**: 設定ファイルと Claude Code agents/hooks は symlink で管理。skills は `gh skill` でコピーインストールする
 - **sheldon**: プラグイン変更後は `sheldon lock` が必要
 - **mise**: ツール追加/変更後は `mise install` で反映
 - **zshrc_local**: マシン固有設定（gitignore対象）。シェルデバッグ時は `.zshrc` から読み込まれることに注意

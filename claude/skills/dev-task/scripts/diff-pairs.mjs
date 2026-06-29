@@ -7,7 +7,7 @@
 //
 // 任意のプロジェクトディレクトリから絶対パスで呼ぶ:
 //   cd <project-root>
-//   node ${CLAUDE_SKILL_DIR}/scripts/diff-pairs.mjs
+//   node ${DEV_TASK_SKILL_DIR}/scripts/diff-pairs.mjs
 //
 // env var:
 //   DIR        — 比較ディレクトリの上書き (既定: /tmp/dev-task-visual-check/$(basename CWD))

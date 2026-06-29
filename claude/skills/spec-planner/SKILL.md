@@ -1,7 +1,9 @@
 ---
 name: spec-planner
-description: 要求・要件・MTG決定（Google Meet / Gemini メモ含む）を取り込んで設計成果物（requirements / design / data-model / requirements-mapping / usecases / open-issues）を新規作成または incremental に改訂し、必要に応じて Notion DB に親ページ + 子ページ構成で同期する。単発 subagent 逐次フロー（architect / modeler / requirements-analyst / critic / scribe を 1 体ごとに呼び出し、critic blocker ゼロまで needs-revise ループ）で設計判断の質を担保し、ステークホルダー向け要求仕様 requirements.md の生成・MTG議事の取り込み・過去比較表現クレンジング・Notion同期までを一気通貫で担当する。Notion 同期が不要なら `notion: skip` でローカル運用に倒せる。設計を起こす / MTG決定を設計に反映する / Notion に上げる、いずれのユースケースでも本スキル単独で対応可能。
-argument-hint: <普通の日本語で「何を・どの MTG ノートを使って・どの資料を参考に」を書けばよい。明示キー (slug:/meetings:/base:/notion:) も後方互換で受け付ける>
+description: >-
+  要求・要件・MTG決定（Google Meet / Gemini メモ含む）を取り込んで設計成果物（requirements / design / data-model / requirements-mapping / usecases / open-issues）を新規作成または incremental に改訂し、必要に応じて Notion DB に親ページ + 子ページ構成で同期する。単発 subagent 逐次フロー（architect / modeler / requirements-analyst / critic / scribe を 1 体ごとに呼び出し、critic blocker ゼロまで needs-revise ループ）で設計判断の質を担保し、ステークホルダー向け要求仕様 requirements.md の生成・MTG議事の取り込み・過去比較表現クレンジング・Notion同期までを一気通貫で担当する。Notion 同期が不要なら `notion: skip` でローカル運用に倒せる。設計を起こす / MTG決定を設計に反映する / Notion に上げる、いずれのユースケースでも本スキル単独で対応可能。
+argument-hint: >-
+  <普通の日本語で「何を・どの MTG ノートを使って・どの資料を参考に」を書けばよい。明示キー (slug:/meetings:/base:/notion:) も後方互換で受け付ける>
 disable-model-invocation: true
 allowed-tools: Read, Write, Edit, Glob, Grep, Bash, Agent, AskUserQuestion, WebFetch
 ---

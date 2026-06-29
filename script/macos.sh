@@ -45,6 +45,7 @@ brew install \
   fzf \
   ripgrep \
   direnv \
+  gh \
   sheldon \
   jq \
   secretive

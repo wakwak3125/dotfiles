@@ -156,12 +156,6 @@ cleanup_removed_tmux_switchers() {
 link_claude_config() {
   ensure_dir "$HOME/.claude"
 
-  # `-n` を付けないと既存の symlink を辿って中にリンクを作ってしまう
-  if [[ ! -L "$HOME/.claude/skills" ]]; then
-    rm -rf "$HOME/.claude/skills"
-  fi
-  link_dir "$ROOT/claude/skills" "$HOME/.claude/skills"
-
   if [[ ! -L "$HOME/.claude/agents" ]]; then
     rm -rf "$HOME/.claude/agents"
   fi
@@ -208,6 +202,10 @@ merge_claude_settings() {
     "$claude_settings" > "$claude_settings_tmp"
   mv "$claude_settings_tmp" "$claude_settings"
   echo "==> Merged WorktreeCreate hook and ccstatusline statusLine into $claude_settings"
+}
+
+install_agent_skills() {
+  bash "$ROOT/script/install-agent-skills.sh"
 }
 
 install_mise() {
@@ -272,9 +270,10 @@ run_step "Removed tmux switcher cleanup" cleanup_removed_tmux_switchers
 # ================================================
 # Claude Code 個人設定
 # ================================================
-run_step "Claude config symlinks" link_claude_config
+run_step "Claude runtime config symlinks" link_claude_config
 run_step "Claude org docs symlinks" link_claude_org_docs
 run_step "Claude settings merge" merge_claude_settings
+run_step "Agent skill install" install_agent_skills
 
 # ================================================
 # ツールのインストール

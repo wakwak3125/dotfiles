@@ -12,7 +12,7 @@ Storybook + Playwright + Figma の比較ループを回す手順。
 - ループ実行 (1. Story ID 特定 / 2. Story リスト構築 / 3. スクショ実行 / 4. ペア存在チェック / 5. 比較)
 - 反復
 - 停止条件
-- Claude の比較の心得
+- 視覚比較の心得
 - トラブルシューティング
 
 ## Story の用意基準 (フェーズ 4d)
@@ -27,17 +27,17 @@ Story 名は state を反映: `Default`、`Hover`、`Focus`、`Disabled`、`Load
 
 ## 初回セットアップ (マシンごとに 1 回だけ)
 
-`${CLAUDE_SKILL_DIR}` は Claude Code が当該 Skill のディレクトリを指して設定する環境変数(personal/project どちらの配置でも正しく解決される)。
+`${DEV_TASK_SKILL_DIR}` は runtime adapter が定義する dev-task Skill ディレクトリ。Claude Code では `CLAUDE_SKILL_DIR`、Codex では `$HOME/.codex/skills/dev-task` などをもとに設定する。
 
 ### 存在チェック (常に実行)
 
 検証フェーズに入ったらまず存在確認だけを行う。`npm install` を直接呼ぶことは禁止:
 
 ```bash
-test -d "${CLAUDE_SKILL_DIR}/node_modules/playwright" \
-  && test -d "${CLAUDE_SKILL_DIR}/node_modules/playwright-core" \
-  && test -d "${CLAUDE_SKILL_DIR}/node_modules/pixelmatch" \
-  && test -d "${CLAUDE_SKILL_DIR}/node_modules/pngjs" \
+test -d "${DEV_TASK_SKILL_DIR}/node_modules/playwright" \
+  && test -d "${DEV_TASK_SKILL_DIR}/node_modules/playwright-core" \
+  && test -d "${DEV_TASK_SKILL_DIR}/node_modules/pixelmatch" \
+  && test -d "${DEV_TASK_SKILL_DIR}/node_modules/pngjs" \
   && echo "deps ready" \
   || echo "deps NOT installed"
 ```
@@ -51,7 +51,7 @@ test -d "${CLAUDE_SKILL_DIR}/node_modules/playwright" \
 ユーザーに **「Playwright と Chromium をインストールしてよいか」を明示的に確認してから**、承認を得た後に以下を実行:
 
 ```bash
-(cd "${CLAUDE_SKILL_DIR}" && npm install && npx playwright install chromium)
+(cd "${DEV_TASK_SKILL_DIR}" && npm install && npx playwright install chromium)
 ```
 
 Chromium binary のダウンロードを伴うため (200MB+、数分)、auto-mode でも自動実行しない。
@@ -101,7 +101,7 @@ GET http://localhost:6006/index.json
 ```bash
 cd <project-root>
 STORIES='[{"id":"button--default"},{"id":"button--hover","state":"hover"}]' \
-  node "${CLAUDE_SKILL_DIR}/scripts/screenshot-stories.mjs"
+  node "${DEV_TASK_SKILL_DIR}/scripts/screenshot-stories.mjs"
 ```
 
 出力は `/tmp/dev-task-visual-check/<project-basename>/<story-id>__<state>__<viewport>__playwright.png` に保存される (`OUT_DIR` で上書き可)。`<project-basename>` は CWD のディレクトリ名。
@@ -114,7 +114,7 @@ Figma 側の画像は同じディレクトリに `<story-id>__<state>__<viewport
 STORYBOOK_URL=http://localhost:7777 \
 VIEWPORTS='[{"name":"desktop","width":1440,"height":900}]' \
 STORIES='[...]' \
-  node "${CLAUDE_SKILL_DIR}/scripts/screenshot-stories.mjs"
+  node "${DEV_TASK_SKILL_DIR}/scripts/screenshot-stories.mjs"
 ```
 
 ### 4. ペア存在チェック (フェーズ 4e-3)
@@ -137,7 +137,7 @@ done
 
 ```bash
 cd <project-root>
-node "${CLAUDE_SKILL_DIR}/scripts/diff-pairs.mjs"
+node "${DEV_TASK_SKILL_DIR}/scripts/diff-pairs.mjs"
 ```
 
 各ペアの `__diff.png` (差分ハイライト) と diff 率が出る。`dimensionMismatch` があれば取得条件のずれなので先に直す。diff 画像は「どこを注視すべきか」を絞る手がかりであり、最終判定は visual-reviewer が行う。
@@ -172,7 +172,7 @@ node "${CLAUDE_SKILL_DIR}/scripts/diff-pairs.mjs"
 - **空回り。** 同じ差分について 3 回反復しても収束しない → 現状のスクショ、何が一致しないかの説明、仕様/トークン調整 or 差分容認の判断をユーザーに仰ぐ。
 - **環境問題。** Storybook が起動しない、`node_modules` が壊れている、MCP がエラー、Chromium 未インストール → 修正(必要なら `npm install` 再実行)するか報告。コードを目視するだけのフォールバックはしない。
 
-## Claude の比較の心得
+## 視覚比較の心得
 
 画像を比較する際:
 
@@ -185,8 +185,8 @@ node "${CLAUDE_SKILL_DIR}/scripts/diff-pairs.mjs"
 
 | 症状 | 原因 | 対処 |
 |---|---|---|
-| `Cannot find package 'playwright'` | 初回セットアップ未実施 | `cd "${CLAUDE_SKILL_DIR}" && npm install` |
-| `Cannot find package 'pixelmatch'` | 旧構成でセットアップ済み (pixelmatch 追加前) | `cd "${CLAUDE_SKILL_DIR}" && npm install` (ユーザー確認後) |
-| `browserType.launch: Executable doesn't exist` | Chromium 未ダウンロード | `cd "${CLAUDE_SKILL_DIR}" && npx playwright install chromium` |
+| `Cannot find package 'playwright'` | 初回セットアップ未実施 | `cd "${DEV_TASK_SKILL_DIR}" && npm install` |
+| `Cannot find package 'pixelmatch'` | 旧構成でセットアップ済み (pixelmatch 追加前) | `cd "${DEV_TASK_SKILL_DIR}" && npm install` (ユーザー確認後) |
+| `browserType.launch: Executable doesn't exist` | Chromium 未ダウンロード | `cd "${DEV_TASK_SKILL_DIR}" && npx playwright install chromium` |
 | `Storybook を検出できませんでした` | Storybook 未起動 or 特殊ポート | プロジェクトで起動するか `STORYBOOK_URL` を設定 |
 | スクショが空白/真っ白 | dev server が描画前 | `page.waitForTimeout` を上げる or `networkidle` 待ち追加 |
