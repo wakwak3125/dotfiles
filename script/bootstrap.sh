@@ -167,9 +167,20 @@ link_claude_config() {
 }
 
 link_claude_org_docs() {
-  # Claude Code org 単位の CLAUDE.md (claude/orgs/<org>.CLAUDE.md -> ~/src/github.com/<org>/CLAUDE.md)
+  # Org 単位の agent docs (claude/orgs/<org>.AGENTS.md -> ~/src/github.com/<org>/AGENTS.md)
+  # Claude Code 互換の参照 stub は <org>.CLAUDE.md -> ~/src/github.com/<org>/CLAUDE.md として置く。
   # claude/orgs/ は gitignore 対象 (会社固有情報を含むため)。ファイルがあるマシンでのみ symlink を張る
   if [[ -d "$ROOT/claude/orgs" ]]; then
+    local org_md org
+
+    for org_md in "$ROOT"/claude/orgs/*.AGENTS.md; do
+      [[ -f "$org_md" ]] || continue
+      org="$(basename "$org_md" .AGENTS.md)"
+      if [[ -d "$HOME/src/github.com/$org" ]]; then
+        link_file "$org_md" "$HOME/src/github.com/$org/AGENTS.md"
+      fi
+    done
+
     for org_md in "$ROOT"/claude/orgs/*.CLAUDE.md; do
       [[ -f "$org_md" ]] || continue
       org="$(basename "$org_md" .CLAUDE.md)"
