@@ -26,7 +26,7 @@ PLAN_REQUIRED でも、実装前に plan をユーザーへ提示して承認を
 
 ## Delegation
 
-Claude Code の `Agent` tool と `claude/agents/dev-task-*.md` は前提にしない。Codex ではメインエージェントが原則として実装・検証・レビュー統合まで担当する。
+Claude Code の `Agent` tool と `agents/agents/dev-task-*.md` は前提にしない。Codex ではメインエージェントが原則として実装・検証・レビュー統合まで担当する。
 
 利用可能な multi-agent tools があり、作業の分離が明確で、追加の承認や外部状態変更を増やさない場合だけ、探索・実装・レビューの一部を subagent に委譲してよい。使えない場合は止まらずメインで進める。
 

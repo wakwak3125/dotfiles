@@ -4,7 +4,7 @@ set -Eeuo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-MANIFEST="${1:-$ROOT/claude/skills/manifest.tsv}"
+MANIFEST="${1:-$ROOT/agents/skills/manifest.tsv}"
 CACHE_ROOT="${AGENT_SKILLS_CACHE_DIR:-${XDG_CACHE_HOME:-$HOME/.cache}/dotfiles-agent-skills}"
 
 warn() {

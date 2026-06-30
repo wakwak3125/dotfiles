@@ -10,7 +10,7 @@ Windows 側ターミナル (WezTerm 等) の設定はこのリポジトリでは
 
 ```
 dotfiles/
-├── claude/           # Claude Code / Codex 向け agent 資産
+├── agents/           # Claude Code / Codex 向け agent 共通資産
 │   ├── skills/       # 個人 skills (`gh skill` で Claude Code / Codex に install)
 │   │   └── manifest.tsv # skill ごとの install 先 agent 定義
 │   ├── agents/       # Claude Code subagent 定義 (spec-planner-*, japan-{ehr,receipt}-* 等)
@@ -63,7 +63,7 @@ bootstrap.sh が以下を実行:
 1. OS 判定後、macOS は `script/macos.sh`、WSL2/Linux は `script/wsl.sh` を実行
 2. 各設定ファイルの symlink 作成 (~/.zsh, ~/.config/nvim, herdr, tmux, sheldon, mise, starship)
 3. スクリプトを ~/.local/bin にインストール
-4. Claude Code agents/hooks を symlink、skills を `gh skill` で Claude Code / Codex にインストール
+4. agent 共通資産をセットアップ (Claude Code agents/hooks を symlink、skills を `gh skill` で Claude Code / Codex にインストール)
 5. Neovim / mise tool / Git global config をセットアップ
 
 ### WSL2
@@ -74,7 +74,7 @@ bootstrap.sh が以下を実行:
 ## 変更時の注意事項
 
 - **OS 分岐**: `.zshrc` や `bootstrap.sh` に macOS/Linux の条件分岐あり。片方だけ壊さないよう注意
-- **symlink**: 設定ファイルと Claude Code agents/hooks は symlink で管理。skills は `gh skill` でコピーインストールする
+- **symlink**: 設定ファイルと Claude Code 用 agents/hooks は symlink で管理。skills は `gh skill` でコピーインストールする
 - **sheldon**: プラグイン変更後は `sheldon lock` が必要
 - **mise**: ツール追加/変更後は `mise install` で反映
 - **zshrc_local**: マシン固有設定（gitignore対象）。シェルデバッグ時は `.zshrc` から読み込まれることに注意
