@@ -12,15 +12,14 @@ export DEV_TASK_SKILL_DIR="${CLAUDE_SKILL_DIR:?}"
 
 以降、共通手順内の `${DEV_TASK_SKILL_DIR}` は Claude Code が設定する Skill ディレクトリを指す。
 
-## Plan approval
+## Plan creation
 
-PLAN_REQUIRED では Claude Code の plan mode を使う:
+PLAN_REQUIRED でも plan mode (`EnterPlanMode` / `ExitPlanMode`) は使わず、人間の承認は取らない:
 
-1. `EnterPlanMode` を呼ぶ。
-2. `dev-task-planner` subagent を `Agent` tool で起動する。
-3. planner の出力を `ExitPlanMode` で提示し、承認 UI で明示承認を得る。
+1. `dev-task-planner` subagent を `Agent` tool で起動する。
+2. 返ってきたプランを workspec に追記し、そのままフェーズ 4 へ進む。
 
-テキストで「承認しますか?」と聞くだけで実装へ進まない。
+`ExitPlanMode` 等の承認 UI で実装開始の許可を待たない。ただしユーザーが自分から plan mode で承認したプランを渡してきた場合は、SKILL.md の *承認済みプランからのエントリ* に従いフェーズ 4 から進める。
 
 ## Delegation
 
