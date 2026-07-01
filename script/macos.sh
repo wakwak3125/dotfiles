@@ -43,12 +43,12 @@ echo "==> Installing Homebrew packages..."
 # node/npm 系は Homebrew では入れない (mise 管理: config/mise/config.toml)。
 # brew の formula (agent-browser 等) が依存で node を引き込むと mise の node と
 # 二重管理になり、llhttp 等のライブラリ不整合でツールが壊れるため。
+# gh も mise 管理 (config/mise/config.toml)。
 brew install \
   tmux \
   fzf \
   ripgrep \
   direnv \
-  gh \
   sheldon \
   jq \
   secretive
