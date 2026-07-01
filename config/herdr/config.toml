@@ -6,8 +6,8 @@
 onboarding = false
 
 [theme]
-# tmux 時代の nordtheme/tmux を組込みテーマで踏襲
-name = "nord"
+# 組込みテーマ kanagawa
+name = "kanagawa"
 
 [terminal]
 # new_cwd = "follow" (デフォルト) が tmux の split-window -c "#{pane_current_path}" 相当
