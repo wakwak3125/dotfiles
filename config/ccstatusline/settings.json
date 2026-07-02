@@ -17,13 +17,15 @@
     [
       { "id": "20", "type": "block-timer", "color": "brightBlack" },
       { "id": "21", "type": "separator" },
-      { "id": "22", "type": "weekly-usage", "color": "brightMagenta" },
+      { "id": "22", "type": "session-usage", "color": "brightBlue" },
       { "id": "23", "type": "separator" },
-      { "id": "24", "type": "weekly-reset-timer", "color": "brightBlack" },
+      { "id": "24", "type": "weekly-usage", "color": "brightMagenta" },
       { "id": "25", "type": "separator" },
-      { "id": "26", "type": "session-clock", "color": "brightBlack" },
+      { "id": "26", "type": "weekly-reset-timer", "color": "brightBlack" },
       { "id": "27", "type": "separator" },
-      { "id": "28", "type": "compaction-counter", "color": "brightBlack" }
+      { "id": "28", "type": "session-clock", "color": "brightBlack" },
+      { "id": "29", "type": "separator" },
+      { "id": "30", "type": "compaction-counter", "color": "brightBlack" }
     ],
     []
   ],
