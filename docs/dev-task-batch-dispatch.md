@@ -3,7 +3,7 @@
 複数チケットを一度に渡されたとき、dev-task が **1チケット1 worker** を再帰的に spawn し、メインは
 ディスパッチとタスク管理・横断整合に専念してメイン context を新鮮に保つためのアーキテクチャ設計。
 
-- ステータス: proposal (未実装)
+- ステータス: Phase A 実装済み (直列版)。Phase B 以降は未実装
 - 前提: Claude Code v2.1.172 以降 (subagent のネスト spawn が可能)
 - 関連: `agents/skills/dev-task/SKILL.md`、`agents/agents/dev-task-*.md`、`references/runtime-claude-code.md`
 
@@ -123,7 +123,7 @@ worker が返すサマリ (メインの集約・横断整合の入力):
 
 ## 8. 段階的ロールアウト
 
-1. **Phase A** — `dev-task-worker` 定義 + SKILL.md フェーズ0 (依存グラフは「全部直列」の単純版から)。並列なし・衝突検出なしで、まず再帰と context 隔離が機能することを確認。
+1. **Phase A (実装済み)** — `dev-task-worker` 定義 + SKILL.md フェーズ0 (直列)。並列なし・衝突検出なし (横断レビューで事後検出) で、まず再帰と context 隔離が機能することを確認する段階。
 2. **Phase B** — 独立ユニットの並列化 + `isolation: worktree` + 並列度上限。
 3. **Phase C** — 共有ファイル衝突の事前検出と横断レビューの自動化。
 4. **Phase D** — 依存グラフの精緻化 (proto/生成コード等の型別ルール)。
