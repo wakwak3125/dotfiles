@@ -18,20 +18,6 @@ codex exec \
   - < "$PROMPT_FILE"
 ```
 
-軽微修正:
-
-```bash
-codex exec \
-  -C "$REPO_ROOT" \
-  --profile dev-task-implementer-fast \
-  --sandbox workspace-write \
-  --ask-for-approval never \
-  --ephemeral \
-  --output-schema "$DEV_TASK_CODEX_SKILL_DIR/schemas/implementer-result.schema.json" \
-  -o "$RESULT_JSON" \
-  - < "$PROMPT_FILE"
-```
-
 高リスク実装:
 
 ```bash
@@ -53,18 +39,7 @@ Profile は dotfiles の `config/codex/*.config.toml` で管理し、`script/boo
 `config/codex/dev-task-implementer.config.toml`:
 
 ```toml
-model = "gpt-5.4"
-model_reasoning_effort = "high"
-
-[[skills.config]]
-path = "/Users/wakwak/.codex/skills/dev-task/SKILL.md"
-enabled = false
-```
-
-`config/codex/dev-task-implementer-fast.config.toml`:
-
-```toml
-model = "gpt-5.4-mini"
+model = "gpt-5.5"
 model_reasoning_effort = "medium"
 
 [[skills.config]]

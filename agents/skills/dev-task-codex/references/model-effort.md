@@ -7,8 +7,7 @@
 | main / orchestrator | Claude Code | inherit | inherit |
 | `dev-task-worker` | Claude | sonnet | high |
 | `dev-task-planner` | Claude | inherit | high |
-| 非 UI 通常実装 | Codex | gpt-5.4 | high |
-| 非 UI 軽微修正 | Codex | gpt-5.4-mini | medium |
+| 非 UI 通常 / 軽微実装 | Codex | gpt-5.5 | medium |
 | 非 UI 高リスク実装 | Codex | gpt-5.5 | high |
 | UI / Figma / visual 実装 | Claude | opus | high |
 | `dev-task-visual-reviewer` | Claude | opus | high |
@@ -27,7 +26,7 @@
 
 ## Fast Path
 
-次に該当するものは fast profile でよい。
+次に該当するものは通常 profile (`dev-task-implementer`) でよい。
 
 - import 整理
 - lint / format の明確な修正

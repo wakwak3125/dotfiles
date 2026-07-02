@@ -129,7 +129,6 @@ link_common_config() {
   link_file "$ROOT/config/git/ignore" "$HOME/.config/git/ignore"
 
   link_file "$ROOT/config/codex/dev-task-implementer.config.toml" "$HOME/.codex/dev-task-implementer.config.toml"
-  link_file "$ROOT/config/codex/dev-task-implementer-fast.config.toml" "$HOME/.codex/dev-task-implementer-fast.config.toml"
   link_file "$ROOT/config/codex/dev-task-implementer-heavy.config.toml" "$HOME/.codex/dev-task-implementer-heavy.config.toml"
 }
 
