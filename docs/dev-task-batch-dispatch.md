@@ -1,0 +1,137 @@
+# dev-task バッチディスパッチ設計 (proposal)
+
+複数チケットを一度に渡されたとき、dev-task が **1チケット1 worker** を再帰的に spawn し、メインは
+ディスパッチとタスク管理・横断整合に専念してメイン context を新鮮に保つためのアーキテクチャ設計。
+
+- ステータス: proposal (未実装)
+- 前提: Claude Code v2.1.172 以降 (subagent のネスト spawn が可能)
+- 関連: `agents/skills/dev-task/SKILL.md`、`agents/agents/dev-task-*.md`、`references/runtime-claude-code.md`
+
+## 1. 目的
+
+- **メイン context の鮮度維持** — チケットが何本あっても、メインには各 worker のコンパクトなサマリだけが返る。探索・実装・レビューの詳細は worker とその子で消費され、メインに漏れない。
+- **タスク管理** — メインが全チケットの状態 (待ち / 進行 / 完了 / ブロック) を一元管理する。
+- **横断整合** — 「単体では正しいが束ねると矛盾する」変更 (共有ファイル衝突・パターンのブレ・依存順序) をメインが検査する。
+
+達成手段は「dev-task が dev-task を subagent として呼ぶ」再帰。v2.1.172 以降これは成立する
+(トップレベル subagent のサマリだけがメインに返る仕様が、目的にそのまま合致する)。
+
+## 2. 前提とネスト予算
+
+Claude Code のネスト仕様 (`create-subagents` ドキュメント):
+
+- subagent は自分の subagent を spawn できる。**深さ上限は 5** で固定・変更不可。深さ5の subagent は `Agent` tool を受け取らずそれ以上 spawn できない。
+- ネストするには、その subagent の `tools` に **`Agent` を含める**必要がある (parens 内の型リストは無視される)。`Agent` を渡さなければ末端で止まる。
+- **トップレベル subagent のサマリだけがメインに返る。** 中間サマリ (implementer → worker) は worker の context に留まる。
+- 非 Explore/Plan subagent は CLAUDE.md と git status を毎回ロードする (worker ごとの固定コスト)。
+
+本設計の深さ:
+
+```
+main (depth 0)  … ディスパッチャ
+  └─ dev-task-worker (depth 1)  … 1チケットぶんの dev-task
+        ├─ dev-task-planner     (depth 2)
+        ├─ dev-task-implementer (depth 2)
+        ├─ dev-task-reviewer-*  (depth 2)
+        └─ dev-task-visual-*    (depth 2)
+              └─ (implementer が Explore を呼ぶ場合のみ depth 3)
+```
+
+最大 depth 3 程度。上限 5 に対し余裕がある。
+
+## 3. アーキテクチャ
+
+3 層に責務を分割する。
+
+| 層 | 主体 | 責務 |
+|---|---|---|
+| Level 0 | main (ディスパッチャ) | バッチ検知 / 依存グラフ / worker 割当 / タスク管理 / サマリ集約 / 横断整合 |
+| Level 1 | `dev-task-worker` | 1チケットの dev-task フル実行 (理解〜実装〜検証〜レビュー〜PR)。隔離 context |
+| Level 2 | `dev-task-planner` / `implementer` / `reviewer-*` / `visual-reviewer` | 既存 subagent をそのまま利用 |
+
+メインは Level 1 のサマリしか読まない。単一チケット時は従来どおり (worker を挟まずメインが直接 dev-task を回す) で、バッチ時のみこの構成に切り替える。
+
+## 4. `dev-task-worker` agent 定義 (新規)
+
+1チケットぶんの dev-task を回すオーケストレータ。実質「1チケットのミニ main」。
+
+frontmatter の要点:
+
+```yaml
+---
+name: dev-task-worker
+description: dev-task バッチ実行で 1 チケット/1 依頼を丸ごと担当する worker。理解〜設計〜実装〜検証〜レビュー〜PR を隔離 context で完遂し、コンパクトなサマリを返す。
+tools: Read, Grep, Glob, Edit, Write, Bash, Agent, Skill  # Agent 必須 (Level 2 を spawn するため)
+model: inherit          # 難易度はセッションモデルに追従 (planner と同じ思想)
+isolation: worktree     # 各 worker に隔離されたリポジトリ複製を与え、並列編集衝突を根本回避
+skills: [dev-task]      # dev-task の手順をプリロード (or Skill tool で起動)
+---
+```
+
+- **`Agent` 必須** — これが無いと Level 2 (implementer/reviewer 等) を spawn できず、全部インライン実行に退化する。
+- **`isolation: worktree`** — 並列 worker が同一作業ツリーで衝突するのを防ぐ最重要ポイント。デフォルトブランチから分岐した隔離コピーで作業する。
+- **`model: inherit`** — worker は理解・トリアージ・オーケストレーションを担う。難易度が出る工程なので、確立済みモデル方針 (planner=inherit、実行/レビュー=opus/high) に合わせて worker も inherit。worker が spawn する planner も inherit のままセッションモデルに解決される。
+- 役割は SKILL.md のフェーズ 1〜7 をそのまま 1 チケットに適用し、**メインへ返すのはサマリのみ** (下記フォーマット)。
+
+worker が返すサマリ (メインの集約・横断整合の入力):
+
+```
+## worker 結果: <ticket-id / タスク名>
+- 状態: 完了 / ブロック(理由)
+- ブランチ / worktree パス
+- PR URL (作成時)
+- 変更ファイル一覧 (パスのみ)
+- 検証結果 (型/ビルド/テスト/lint の pass/fail)
+- 置いた仮定
+- 横断メモ: 触れた公開境界 / 共有ファイル / 新規パターン (メインの整合検査用に必須)
+```
+
+## 5. フェーズ 0: バッチ検知・ディスパッチ (SKILL.md に追加)
+
+単一入力時は発火しない。以下のいずれかで **バッチモード**に入る:
+
+- 複数のチケット ID が渡された (`[A-Z]+-\d+` が 2 件以上)
+- チケット/タスクのリストが渡された
+- ユーザーが「まとめて」「これら全部」等でバッチを明示
+
+手順:
+
+1. **入力分解** — 各チケット/タスクを 1 ユニットに正規化し、TaskCreate でタスク登録。
+2. **依存グラフ構築** — ユニット間の依存を判定 (proto→利用側、共有ライブラリ→利用側 等)。依存があるものは直列、独立は並列候補。
+3. **共有ファイル衝突の事前検出** — 各ユニットが触りそうなファイルを軽く見積もり、重なるユニットは並列にせず直列化 (or ユーザーに警告)。
+4. **共通コンテキストの用意** — 全 worker に渡す共有 workspec (リポジトリ規約・命名・依存関係・スコープ境界)。パターンのブレを防ぐ。
+5. **worker 割当** — 独立ユニットは `dev-task-worker` を並列 spawn (並列度上限あり)、依存ユニットは前段完了後に spawn。
+6. **サマリ集約** — 各 worker のサマリを TaskUpdate に反映。
+7. **横断レビュー** — 全 worker 完了後、サマリの横断メモを突き合わせ、束ねたときの不整合 (公開境界の二重変更・パターン乖離・共有ファイルの論理衝突) を検査。必要なら追加修正を該当 worker に再委譲。
+
+## 6. 難所と対処
+
+ネストが可能でも自動では解決しない、本設計の実質的な難所。
+
+1. **依存順序** — 依存ユニットは直列。判定を誤ると後段が古い前提で実装する。依存グラフは保守的に (曖昧なら直列) 倒す。
+2. **共有ファイル衝突** — `isolation: worktree` で編集は隔離できるが、**最終マージ**で衝突する。事前の重なり検出 (フェーズ0-3) と、衝突ユニットの直列化で回避。検出漏れは横断レビュー (0-7) で拾う。
+3. **パターン整合** — 共有 workspec (0-4) を全 worker に渡し、同一の参照パターン・規約を強制する。
+4. **集約と横断レビュー** — 単体 PASS でも束ねると矛盾する系。横断メモを必須項目にして、メインが必ず突き合わせる。
+5. **並列度の上限** — worker を無制限並列にすると、サマリ返却でメイン context も太る & リソース逼迫。上限 (例: 3〜4 並列) を設け、超過分はキュー。上限は要チューニング。
+6. **エスカレーション** — あるユニットがブロックしたとき、独立ユニットは続行、依存ユニットは停止してユーザーに提示。
+
+## 7. モデル / 深さ / 並列度の方針
+
+- **model**: worker=inherit、Level 2 は既存方針 (planner=inherit、implementer/reviewer/visual=opus/high)。難易度対応はメインのセッションモデル切替に一本化される。
+- **depth**: 最大 3 程度 (上限 5)。将来 worker-in-worker (バッチの中のバッチ) はやらない — 深さと複雑性が跳ねる。
+- **並列度**: 初期は控えめ (3〜4)。サマリ肥大とメイン context のトレードオフを見て調整。
+
+## 8. 段階的ロールアウト
+
+1. **Phase A** — `dev-task-worker` 定義 + SKILL.md フェーズ0 (依存グラフは「全部直列」の単純版から)。並列なし・衝突検出なしで、まず再帰と context 隔離が機能することを確認。
+2. **Phase B** — 独立ユニットの並列化 + `isolation: worktree` + 並列度上限。
+3. **Phase C** — 共有ファイル衝突の事前検出と横断レビューの自動化。
+4. **Phase D** — 依存グラフの精緻化 (proto/生成コード等の型別ルール)。
+
+## 9. 未解決 / 要意思決定
+
+- **worker への手順の渡し方**: `skills: [dev-task]` プリロード vs Skill tool 起動 vs 専用 system prompt に埋め込み。プリロードが素直だが context コストを測りたい。
+- **単一チケットとの分岐点**: 「2件以上で自動バッチ」でよいか、明示指定のみにするか。誤発火のコストを見て決める。
+- **並列度のデフォルト値**: 3? 4? 実測で。
+- **worktree の後始末**: worker の worktree をマージ後にどう掃除するか (`git wtclean` 連携)。
+- **PR 粒度**: チケットごとに個別 PR か、バッチで 1 つのまとめ PR か (依存関係次第)。
