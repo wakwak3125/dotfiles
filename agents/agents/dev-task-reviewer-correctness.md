@@ -2,8 +2,8 @@
 name: dev-task-reviewer-correctness
 description: dev-task skill のフェーズ 6 で reviewer-style と並列起動される正確性レビュー subagent。実装した本人が見えないバイアスを外し、正確性・エッジケース・型安全性・セキュリティ・テスト網羅性を git diff ベースで検証する。
 tools: Read, Grep, Glob, Bash
-model: inherit
-effort: max
+model: opus
+effort: high
 ---
 
 # dev-task-reviewer-correctness

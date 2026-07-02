@@ -2,7 +2,8 @@
 name: dev-task-visual-reviewer
 description: dev-task skill のフェーズ 4g で起動される視覚比較専用 subagent。UI タスクで Playwright スクショと Figma フレーム画像を side-by-side で比較し、トークン単位の差分を検出する。実装した本人ではない第三者として、自分の実装へのバイアスを持たずに判定する。
 tools: Read, Bash, Grep, Glob
-model: inherit
+model: opus
+effort: high
 ---
 
 # dev-task-visual-reviewer
