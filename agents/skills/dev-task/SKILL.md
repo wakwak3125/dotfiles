@@ -169,7 +169,7 @@ runtime adapter が subagent を提供する場合は、迷ったら委譲する
 1. **自己完結した実装仕様**を組み立てて runtime adapter の手段で `dev-task-implementer` を起動する。subagent はリポジトリを読めるが、設計の文脈は持たないので以下を渡す:
    - 作業仕様ファイルのパス (`/tmp/dev-task/<project-basename>/workspec.md` — 課題・受け入れ条件・仮定・承認済みプラン)
    - 対象ファイル・関数のパス、模倣すべき類似実装のパス (フェーズ 2 で特定したもの)
-   - 広域調査の結論 — 「X の全使用箇所」「複数ディレクトリ横断の影響範囲」のような広い調査が必要なタスクでは、**メインが事前に Explore subagent で調査を済ませ、結論 (パス一覧と要点) を委譲仕様に含める**。subagent はネスト起動できないため、implementer に広域 grep をさせると実装前にその context がファイルダンプで埋まる
+   - 広域調査の結論 — 「X の全使用箇所」「複数ディレクトリ横断の影響範囲」のような広い調査が必要なタスクでは、**メインが事前に Explore subagent で調査を済ませ、結論 (パス一覧と要点) を委譲仕様に含める**。implementer には `Agent` tool を渡していない (かつ実装前に context をファイルダンプで埋めたくない) ため、implementer 自身に広域 grep はさせない
    - 対象レイヤーの reference のパス (`${DEV_TASK_SKILL_DIR}/references/<layer>.md` を絶対パスに展開して渡す)。**メインが要約して渡さない** — 要約は情報を削り、メインの context も消費する。subagent に原文を読ませる
    - 検証コマンド (Kotlin は `./gradlew compileKotlin`、Node.js は `npm run typecheck`、protobuf は `buf lint` / `buf breaking` 等、プロジェクトのもの)
 2. 返ってきたら `git diff` で変更を確認し、メインが*実装ルール*への適合を検証する: 最小差分か (無関係な変更・ついでリファクタの混入)、類似実装のパターンに沿っているか、公開境界に触れていないか (宣言済みの場合を除く)。
