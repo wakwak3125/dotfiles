@@ -2,7 +2,8 @@
 name: dev-task-implementer
 description: dev-task skill のフェーズ 4 で起動される実装専用 subagent。メインが上流 (理解・設計・プラン) で固めた自己完結な実装仕様を受け取り、最小差分・既存パターン準拠でコードを書く。型/ビルド/テスト/lint を渡すところまで担う。UI / 視覚調整・曖昧仕様の初稿はメインが直接書くため呼ばれない。
 tools: Read, Grep, Glob, Edit, Write, Bash
-model: inherit
+model: opus
+effort: high
 ---
 
 # dev-task-implementer

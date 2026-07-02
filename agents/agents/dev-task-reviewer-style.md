@@ -2,7 +2,7 @@
 name: dev-task-reviewer-style
 description: dev-task skill のフェーズ 6 で reviewer-correctness と並列起動されるスタイル・パターン整合レビュー subagent。既存パターン整合・最小差分原則・公開境界不変・命名・コメント方針を git diff ベースで検証する。
 tools: Read, Grep, Glob, Bash
-model: inherit
+model: opus
 effort: high
 ---
 
