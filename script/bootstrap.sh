@@ -127,6 +127,9 @@ link_common_config() {
   link_file "$ROOT/config/starship.toml" "$HOME/.config/starship.toml"
   link_file "$ROOT/config/ccstatusline/settings.json" "$HOME/.config/ccstatusline/settings.json"
   link_file "$ROOT/config/git/ignore" "$HOME/.config/git/ignore"
+
+  link_file "$ROOT/config/codex/dev-task-implementer.config.toml" "$HOME/.codex/dev-task-implementer.config.toml"
+  link_file "$ROOT/config/codex/dev-task-implementer-heavy.config.toml" "$HOME/.codex/dev-task-implementer-heavy.config.toml"
 }
 
 link_linux_clipboard_tools() {
