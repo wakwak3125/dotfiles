@@ -1,0 +1,6 @@
+model = "gpt-5.5"
+model_reasoning_effort = "high"
+
+[[skills.config]]
+path = "/Users/wakwak/.codex/skills/dev-task/SKILL.md"
+enabled = false

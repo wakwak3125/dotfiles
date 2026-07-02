@@ -13,7 +13,7 @@
 - macOS: `script/macos.sh`
 - WSL2/Linux: `script/wsl.sh`
 
-Common config symlinks for zsh, Neovim, tmux, herdr, sheldon, mise, starship, git, and agent runtime files are managed by `bootstrap.sh`. Personal skills are installed with `gh skill` for Claude Code and Codex when the local GitHub CLI supports it.
+Common config symlinks for zsh, Neovim, tmux, herdr, sheldon, mise, starship, git, Codex profiles, and agent runtime files are managed by `bootstrap.sh`. Personal skills are installed with `gh skill` for Claude Code and Codex when the local GitHub CLI supports it.
 
 ## WSL2 Notes
 
