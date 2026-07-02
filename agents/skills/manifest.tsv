@@ -1,4 +1,5 @@
 # skill_path	agents
 agents/skills/autopilot/SKILL.md	claude-code
 agents/skills/dev-task/SKILL.md	claude-code,codex
+agents/skills/japanese-tech-writing/SKILL.md	claude-code,codex
 agents/skills/spec-planner/SKILL.md	claude-code
