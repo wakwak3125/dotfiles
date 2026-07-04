@@ -169,26 +169,40 @@ link_claude_config() {
   link_file "$ROOT/agents/hooks/worktree-create.sh" "$HOME/.claude/hooks/worktree-create.sh"
 }
 
-link_claude_org_docs() {
-  # Org 単位の agent docs (agents/orgs/<org>.AGENTS.md -> ~/src/github.com/<org>/AGENTS.md)
-  # Claude Code 互換の参照 stub は <org>.CLAUDE.md -> ~/src/github.com/<org>/CLAUDE.md として置く。
-  # agents/orgs/ は gitignore 対象 (会社固有情報を含むため)。ファイルがあるマシンでのみ symlink を張る
-  if [[ -d "$ROOT/agents/orgs" ]]; then
-    local org_md org
+link_agent_global_docs() {
+  # グローバル agent docs (全プロジェクト共通の個人用指示)
+  # Claude Code は ~/.claude/CLAUDE.md、Codex は ~/.codex/AGENTS.md を参照する。
+  # 中身は同一に保つが、エージェント固有指示のためファイルは分ける。
+  ensure_dir "$HOME/.claude"
+  ensure_dir "$HOME/.codex"
+  link_file "$ROOT/agents/claude/global/CLAUDE.md" "$HOME/.claude/CLAUDE.md"
+  link_file "$ROOT/agents/codex/global/AGENTS.md" "$HOME/.codex/AGENTS.md"
+}
 
-    for org_md in "$ROOT"/agents/orgs/*.AGENTS.md; do
-      [[ -f "$org_md" ]] || continue
-      org="$(basename "$org_md" .AGENTS.md)"
-      if [[ -d "$HOME/src/github.com/$org" ]]; then
-        link_file "$org_md" "$HOME/src/github.com/$org/AGENTS.md"
+link_agent_org_docs() {
+  # Org 単位の agent docs。
+  #   agents/claude/org/<org>/CLAUDE.md -> ~/src/github.com/<org>/CLAUDE.md
+  #   agents/codex/org/<org>/AGENTS.md  -> ~/src/github.com/<org>/AGENTS.md
+  # agents/{claude,codex}/org/ は gitignore 対象 (会社固有情報を含むため)。
+  # ファイルがあるマシンでのみ symlink を張る。
+  local org_dir org
+
+  if [[ -d "$ROOT/agents/claude/org" ]]; then
+    for org_dir in "$ROOT"/agents/claude/org/*/; do
+      [[ -d "$org_dir" ]] || continue
+      org="$(basename "$org_dir")"
+      if [[ -f "$org_dir/CLAUDE.md" && -d "$HOME/src/github.com/$org" ]]; then
+        link_file "$org_dir/CLAUDE.md" "$HOME/src/github.com/$org/CLAUDE.md"
       fi
     done
+  fi
 
-    for org_md in "$ROOT"/agents/orgs/*.CLAUDE.md; do
-      [[ -f "$org_md" ]] || continue
-      org="$(basename "$org_md" .CLAUDE.md)"
-      if [[ -d "$HOME/src/github.com/$org" ]]; then
-        link_file "$org_md" "$HOME/src/github.com/$org/CLAUDE.md"
+  if [[ -d "$ROOT/agents/codex/org" ]]; then
+    for org_dir in "$ROOT"/agents/codex/org/*/; do
+      [[ -d "$org_dir" ]] || continue
+      org="$(basename "$org_dir")"
+      if [[ -f "$org_dir/AGENTS.md" && -d "$HOME/src/github.com/$org" ]]; then
+        link_file "$org_dir/AGENTS.md" "$HOME/src/github.com/$org/AGENTS.md"
       fi
     done
   fi
@@ -285,7 +299,8 @@ run_step "Removed tmux switcher cleanup" cleanup_removed_tmux_switchers
 # Claude Code 個人設定
 # ================================================
 run_step "Claude runtime config symlinks" link_claude_config
-run_step "Claude org docs symlinks" link_claude_org_docs
+run_step "Agent global docs symlinks" link_agent_global_docs
+run_step "Agent org docs symlinks" link_agent_org_docs
 run_step "Claude settings merge" merge_claude_settings
 run_step "Agent skill install" install_agent_skills
 

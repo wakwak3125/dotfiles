@@ -11,6 +11,12 @@ Windows 側ターミナル (WezTerm 等) の設定はこのリポジトリでは
 ```
 dotfiles/
 ├── agents/           # Claude Code / Codex 向け agent 共通資産
+│   ├── claude/       # Claude Code 用ドキュメント
+│   │   ├── global/CLAUDE.md      # 全プロジェクト共通の個人指示 (-> ~/.claude/CLAUDE.md)
+│   │   └── org/<org>/CLAUDE.md   # org 単位の個人指示 (gitignore; -> ~/src/github.com/<org>/CLAUDE.md)
+│   ├── codex/        # Codex 用ドキュメント (中身は claude/ 側と同一に保つ)
+│   │   ├── global/AGENTS.md      # 全プロジェクト共通の個人指示 (-> ~/.codex/AGENTS.md)
+│   │   └── org/<org>/AGENTS.md   # org 単位の個人指示 (gitignore; -> ~/src/github.com/<org>/AGENTS.md)
 │   ├── skills/       # 個人 skills (`gh skill` で Claude Code / Codex に install)
 │   │   └── manifest.tsv # skill ごとの install 先 agent 定義
 │   ├── agents/       # Claude Code subagent 定義 (spec-planner-*, japan-{ehr,receipt}-* 等)
@@ -63,7 +69,7 @@ bootstrap.sh が以下を実行:
 1. OS 判定後、macOS は `script/macos.sh`、WSL2/Linux は `script/wsl.sh` を実行
 2. 各設定ファイルの symlink 作成 (~/.zsh, ~/.config/nvim, herdr, tmux, sheldon, mise, starship)
 3. スクリプトを ~/.local/bin にインストール
-4. agent 共通資産をセットアップ (Claude Code agents/hooks を symlink、skills を `gh skill` で Claude Code / Codex にインストール)
+4. agent 共通資産をセットアップ (Claude Code agents/hooks を symlink、global/org の CLAUDE.md/AGENTS.md を symlink、skills を `gh skill` で Claude Code / Codex にインストール)
 5. Neovim / mise tool / Git global config をセットアップ
 
 ### WSL2
@@ -75,6 +81,7 @@ bootstrap.sh が以下を実行:
 
 - **OS 分岐**: `.zshrc` や `bootstrap.sh` に macOS/Linux の条件分岐あり。片方だけ壊さないよう注意
 - **symlink**: 設定ファイルと Claude Code 用 agents/hooks は symlink で管理。skills は `gh skill` でコピーインストールする
+- **agent docs**: `agents/claude/{global,org}` (CLAUDE.md) と `agents/codex/{global,org}` (AGENTS.md) は同一内容を保つ (エージェント固有指示が必要なときだけ分岐)。global は追跡、org は gitignore 対象。bootstrap で symlink される
 - **sheldon**: プラグイン変更後は `sheldon lock` が必要
 - **mise**: ツール追加/変更後は `mise install` で反映
 - **zshrc_local**: マシン固有設定（gitignore対象）。シェルデバッグ時は `.zshrc` から読み込まれることに注意
