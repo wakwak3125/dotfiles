@@ -329,3 +329,8 @@ if [[ -d "$HOME/.docker/completions" ]]; then
   autoload -Uz compinit
   compinit
 fi
+
+# henry-preview CLI completion (インストール済みの場合のみ)
+if command -v henry-preview >/dev/null 2>&1; then
+  source <(henry-preview completion zsh)
+fi
