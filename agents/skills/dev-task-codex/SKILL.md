@@ -37,8 +37,8 @@ Claude Code で既存 `dev-task` workflow を実行しつつ、非 UI の実装�
 
 詳細は `references/model-effort.md` を読む。
 
-- 非 UI 通常 / 軽微実装: Codex `gpt-5.5`, `medium`
-- 非 UI 高リスク実装: Codex `gpt-5.5`, `high`
+- 非 UI 通常 / 軽微実装: Codex `gpt-5.6-sol`, `medium`
+- 非 UI 高リスク実装: Codex `gpt-5.6-sol`, `high`
 - UI / visual / correctness review: Claude Opus, `high`
 - style review: Claude Sonnet, `medium` を標準。大差分なら `high`
 

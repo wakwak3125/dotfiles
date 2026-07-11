@@ -39,7 +39,7 @@ Profile は dotfiles の `config/codex/*.config.toml` で管理し、`script/boo
 `config/codex/dev-task-implementer.config.toml`:
 
 ```toml
-model = "gpt-5.5"
+model = "gpt-5.6-sol"
 model_reasoning_effort = "medium"
 
 [[skills.config]]
@@ -50,7 +50,7 @@ enabled = false
 `config/codex/dev-task-implementer-heavy.config.toml`:
 
 ```toml
-model = "gpt-5.5"
+model = "gpt-5.6-sol"
 model_reasoning_effort = "high"
 
 [[skills.config]]

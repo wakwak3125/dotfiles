@@ -7,13 +7,13 @@
 | main / orchestrator | Claude Code | inherit | inherit |
 | `dev-task-worker` | Claude | sonnet | high |
 | `dev-task-planner` | Claude | inherit | high |
-| 非 UI 通常 / 軽微実装 | Codex | gpt-5.5 | medium |
-| 非 UI 高リスク実装 | Codex | gpt-5.5 | high |
+| 非 UI 通常 / 軽微実装 | Codex | gpt-5.6-sol | medium |
+| 非 UI 高リスク実装 | Codex | gpt-5.6-sol | high |
 | UI / Figma / visual 実装 | Claude | opus | high |
 | `dev-task-visual-reviewer` | Claude | opus | high |
 | `dev-task-reviewer-correctness` | Claude | opus | high |
 | `dev-task-reviewer-style` | Claude | sonnet | medium |
-| Codex review 併用 | Codex | gpt-5.5 | high |
+| Codex review 併用 | Codex | gpt-5.6-sol | high |
 
 ## High Risk
 
