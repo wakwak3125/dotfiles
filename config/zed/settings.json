@@ -7,6 +7,8 @@
 // custom settings, run `zed: open default settings` from the
 // command palette (cmd-shift-p / ctrl-shift-p)
 {
+  "ui_font_family": "PlemolJP",
+  "buffer_font_family": "PlemolJP35",
   "terminal": {
     "dock": "right",
   },
@@ -46,15 +48,11 @@
   "vim_mode": true,
   "base_keymap": "JetBrains",
   "icon_theme": {
-    "mode": "dark",
+    "mode": "system",
     "light": "Zed (Default)",
-    "dark": "Zed (Default)",
+    "dark": "Zed (Default)"
   },
-  "ui_font_size": 16,
+  "ui_font_size": 16.0,
   "buffer_font_size": 15,
-  "theme": {
-    "mode": "dark",
-    "light": "One Light",
-    "dark": "Ayu Dark",
-  },
+  "theme": "Kanagawa Wave",
 }
