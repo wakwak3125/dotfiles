@@ -32,6 +32,17 @@ CLAUDE.md (Claude Code) と AGENTS.md (Codex) は同一内容を保つこと。�
 - **PR 作成**: `gh pr create` を使用
 - push する際、origin のベースブランチと比較し、rebase が必要な場合は必ず rebase の上 push すること
 
+## Auto memory 運用方針 (Claude Code 固有)
+
+- MEMORY.md は目次に徹する: 1項目1行、詳細はトピックファイル (debugging.md 等) へ
+- 保存対象は「コードと公式ドキュメントから導出できないこと」だけ:
+  - 再現に時間がかかったバグの根本原因と回避策
+  - ユーザーが明示的に訂正した好み・規約 (訂正された事実ごと記録)
+  - ドキュメント化されていない環境・ビルドの罠
+- 保存しない: ディレクトリ構成 / 依存関係 / アーキ概要 / タスク固有の一時文脈 / 未確認の推測
+- 書き込む前に既存エントリを確認し、重複・陳腐化は追記でなく統合か削除
+- 迷ったら保存しない
+
 ## org 固有設定
 
 組織・会社固有の設定は `~/src/github.com/<org>/CLAUDE.md` および `AGENTS.md` に置く (dotfiles の `agents/claude/org/<org>/CLAUDE.md` / `agents/codex/org/<org>/AGENTS.md` から symlink、gitignore 対象)。その org 配下のリポジトリ・worktree で作業するときだけ読み込まれる。
