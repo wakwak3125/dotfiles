@@ -45,9 +45,10 @@ prompt_new_tab_name = false
 
 # バックグラウンド workspace のエージェント状態変化を in-app toast で通知
 agent_panel_scope = "all"
-show_agent_labels_on_pane_borders = true
+show_agent_labels_on_pane_borders = false
+agent_panel_sort = "spaces"
 [ui.toast]
 delivery = "herdr"
 
 [experimental]
-switch_ascii_input_source_in_prefix = true
+switch_ascii_input_source_in_prefix = false
