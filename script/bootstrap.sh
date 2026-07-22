@@ -145,6 +145,7 @@ link_local_scripts() {
   link_file "$ROOT/script/claude-status" "$HOME/.local/bin/claude-status"
   link_file "$ROOT/script/git-wt-tmux-hook.sh" "$HOME/.local/bin/git-wt-tmux-hook.sh"
   link_file "$ROOT/script/git-wt-herdr-hook.sh" "$HOME/.local/bin/git-wt-herdr-hook.sh"
+  link_file "$ROOT/script/git-wtclean-all" "$HOME/.local/bin/git-wtclean-all"
 }
 
 cleanup_removed_tmux_switchers() {

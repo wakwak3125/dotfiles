@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+# 全 ghq リポジトリを横断して git wtclean (gh poi + git worktree prune) を実行する。
+# 追加 worktree を持つリポジトリだけが対象。worktree checkout 自体は除外する。
+#
+# Usage: git wtclean-all [-n|--dry-run]
+
+set -uo pipefail
+
+dry_run=0
+case "${1:-}" in
+  -n | --dry-run)
+    dry_run=1
+    ;;
+  "") ;;
+  *)
+    echo "Usage: git wtclean-all [-n|--dry-run]" >&2
+    exit 2
+    ;;
+esac
+
+root="$(ghq root)"
+failed=()
+cleaned=0
+
+while IFS= read -r repo; do
+  # worktree checkout (<org>/worktree/<repo>/... 配下) は除外
+  [[ "$repo" == */worktree/* ]] && continue
+
+  dir="$root/$repo"
+  count="$(git -C "$dir" worktree list --porcelain 2>/dev/null | grep -c '^worktree ')" || continue
+  # main worktree しかないリポジトリはスキップ
+  ((count > 1)) || continue
+
+  echo "==> $repo"
+  if ((dry_run)); then
+    (cd "$dir" && gh poi --dry-run && git worktree prune --dry-run -v) || failed+=("$repo")
+  else
+    (cd "$dir" && gh poi && git worktree prune -v) || failed+=("$repo")
+  fi
+  ((cleaned += 1))
+done < <(ghq list)
+
+echo "==> done: $cleaned repo(s) processed"
+
+if ((${#failed[@]})); then
+  echo "==> FAILED: ${failed[*]}" >&2
+  exit 1
+fi
