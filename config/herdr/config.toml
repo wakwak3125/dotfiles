@@ -36,10 +36,10 @@ split_vertical = "prefix+|"
 # tab 作成時の名前入力はスキップ (precmd の branch 名自動 rename に任せる。tmux の new-window と同じ挙動)
 prompt_new_tab_name = false
 
-# バックグラウンド workspace のエージェント状態変化を in-app toast で通知
-agent_panel_scope = "all"
 show_agent_labels_on_pane_borders = false
 agent_panel_sort = "spaces"
+
+# バックグラウンド workspace のエージェント状態変化を in-app toast で通知
 [ui.toast]
 delivery = "herdr"
 
