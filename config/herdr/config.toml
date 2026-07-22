@@ -17,13 +17,6 @@ name = "kanagawa"
 # (Karabiner の ghostty-ime-off-on-ctrl-t.json が Ctrl+T で IME を切る前提もそのまま生きる)
 prefix = "ctrl+t"
 
-# pane 移動: tmux の Shift+矢印 direct binding を踏襲
-# (prefix+h/j/k/l は失われるが、navigate モード (prefix+g) 内の h/j/k/l は別途有効)
-focus_pane_left = "shift+left"
-focus_pane_down = "shift+down"
-focus_pane_up = "shift+up"
-focus_pane_right = "shift+right"
-
 # tab 移動: tmux の Alt+←/→ (window 移動) を踏襲
 previous_tab = "alt+left"
 next_tab = "alt+right"
