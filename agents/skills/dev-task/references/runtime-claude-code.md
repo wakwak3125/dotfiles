@@ -25,7 +25,8 @@ PLAN_REQUIRED でも plan mode (`EnterPlanMode` / `ExitPlanMode`) は使わず�
 
 実装・レビュー・視覚比較の委譲は Claude Code の `Agent` tool と `agents/agents/dev-task-*.md` を使う。
 
-- 実装: `dev-task-implementer`
+- 実装 (高リスク): `dev-task-implementer`
+- 実装 (通常・軽微): `dev-task-implementer-light` — profile の選択基準は下記 *Model / effort 方針*
 - 計画: `dev-task-planner`
 - 正確性レビュー: `dev-task-reviewer-correctness`
 - スタイルレビュー: `dev-task-reviewer-style`
@@ -43,12 +44,17 @@ PLAN_REQUIRED でも plan mode (`EnterPlanMode` / `ExitPlanMode`) は使わず�
 
 ### Model / effort 方針
 
-各 `agents/agents/dev-task-*.md` の frontmatter が唯一の真実。方針は以下:
+各 `agents/agents/dev-task-*.md` の frontmatter が唯一の真実。役割ごとの配分: 設計・計画は Fable 5、実装・レビューは Opus 5 (effort はリスクで自動切り替え)。
 
-- **実行・レビュー系 (`implementer` / `reviewer-correctness` / `reviewer-style` / `visual-reviewer`) は `opus` + `effort: high` に固定。** タスクの難易度によらず、実装・レビュー品質を一定に保つ。
-- **`planner` だけ `model: inherit` (effort もセッション追従)。** 設計・計画は難易度が最も出る工程なので、セッションのモデル (難タスクは Fable、通常タスクは Opus 等) と effort をそのまま引き継ぐ。
+- **`planner` は `model: fable` に固定。** 設計・計画は難易度が最も出る工程なので最上位モデルに任せる (PLAN_REQUIRED のときしか起動しないためコスト影響は限定的)。`fable` が使えない環境でエラーになる場合は `model: inherit` に戻す。
+- **実装は Opus 5 の 2 profile を使い分ける (effort の自動切り替え)。** `Agent` tool は spawn 時に model は上書きできるが effort は上書きできないため、effort 違いの定義を 2 つ持ち、メインが差分の性質で選ぶ:
+  - `dev-task-implementer` (`opus` + `high`) — **高リスク実装**: 公開境界 (HTTP API / proto / DB / export 型 / event payload) に触れる、認可・トランザクション・並行性・冪等性、PLAN_REQUIRED だったタスク、複数レイヤー横断
+  - `dev-task-implementer-light` (`opus` + `medium`) — **上記以外の通常・軽微実装**: 局所的な機能追加・bug fix・テスト追加・import 整理・lint / 型エラーの機械修正・定数 / 文言 / 設定値の差し替え
+  - 迷ったら high 側 (`dev-task-implementer`)。フェーズ 5 の検証失敗の修正ループは初回実装と同じ profile に続けさせる。2 つの定義の本文は同一に保つ (分岐は frontmatter のみ)。
+- **reviewer は静的に固定。** `reviewer-correctness` / `visual-reviewer` は `opus` + `high` (品質ゲートの最後の砦)。`reviewer-style` は `opus` + `medium` (Opus 5 はレビュー精度が低 effort でも維持され、スタイル整合は高 effort の恩恵が小さい)。
+- **`worker` は `model: inherit`。** バッチの 1 ユニットを丸ごと持つ「ミニ main」なのでセッションに追従する。
 
-結果として、難易度への対応はメインが**セッションのモデルを切り替えるだけ**で済む。planner がそれに追従し、実行・レビューは Opus 4.8 / high の一定品質が保たれる。
+セッションを Fable で走らせると、メイン (オーケストレーション) と planner が Fable 5、実装・レビューが Opus 5 という配分になる。
 
 ## Progress
 

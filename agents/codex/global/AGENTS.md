@@ -20,7 +20,7 @@ CLAUDE.md (Claude Code) と AGENTS.md (Codex) は同一内容を保つこと。�
 - **OS**: macOS (一部 Linux 対応あり)
 - **エディタ**: Neovim (lazy.nvim, 2スペースインデント)
 - **シェル**: zsh + sheldon (プラグイン管理)
-- **ターミナル**: tmux (prefix: Ctrl+T, vi-mode)
+- **ターミナル**: herdr (prefix: Ctrl+T; tmux から移行中)
 - **ランタイム管理**: mise (Go, Java 21, Node.js, Rust)
 - **プロンプト**: Starship
 

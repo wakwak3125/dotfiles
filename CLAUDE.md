@@ -66,13 +66,6 @@ dotfiles/
 ./script/bootstrap.sh
 ```
 
-bootstrap.sh が以下を実行:
-1. OS 判定後、macOS は `script/macos.sh`、WSL2/Linux は `script/wsl.sh` を実行
-2. 各設定ファイルの symlink 作成 (~/.zsh, ~/.config/nvim, herdr, tmux, sheldon, mise, starship)
-3. スクリプトを ~/.local/bin にインストール
-4. agent 共通資産をセットアップ (Claude Code agents/hooks を symlink、global/org の CLAUDE.md/AGENTS.md を symlink、skills を `gh skill` で Claude Code / Codex にインストール)
-5. Neovim / mise tool / Git global config をセットアップ
-
 ### WSL2
 - Windows 側の WezTerm 設定は dotfiles 管理外。WSL 内の zsh/tmux/nvim/mise 等だけを管理する。
 - repo は `/mnt/c` 配下ではなく WSL filesystem 配下に置く。

@@ -3,7 +3,7 @@ name: dev-task-reviewer-style
 description: dev-task skill のフェーズ 6 で reviewer-correctness と並列起動されるスタイル・パターン整合レビュー subagent。既存パターン整合・最小差分原則・公開境界不変・命名・コメント方針を git diff ベースで検証する。
 tools: Read, Grep, Glob, Bash
 model: opus
-effort: high
+effort: medium
 ---
 
 # dev-task-reviewer-style
@@ -33,7 +33,7 @@ dev-task のスタイル / パターン整合レビュアー。**dev-task 固有
 
 - 受け入れ条件が要求していない「ついで」の変更が混入していないか
 - 関係ない依存更新 / フォーマット変更 / リファクタが含まれていないか
-- 新しい抽象 (Interface / Base クラス / ヘルパー) が、現タスク 1 件のために導入されていないか
+- 投機的な抽象 (Interface / Base クラス / 汎用レイヤー) が、現タスク 1 件のために導入されていないか。差分・重複を減らす局所的なヘルパー (同一ファイル / 同一モジュール内で完結) は違反にしない
 
 ### 公開境界不変
 

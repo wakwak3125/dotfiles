@@ -1,18 +1,13 @@
 # Model And Effort
 
-品質とコストの標準配分。
+品質とコストの標準配分。**Claude 側 subagent の model / effort は `agents/agents/dev-task-*.md` の frontmatter が唯一の真実** (方針は dev-task 本体の `references/runtime-claude-code.md` を参照)。この文書で規定するのは Codex 側だけ:
 
 | 役割 | 実行主体 | モデル | effort |
 | --- | --- | --- | --- |
 | main / orchestrator | Claude Code | inherit | inherit |
-| `dev-task-worker` | Claude | sonnet | high |
-| `dev-task-planner` | Claude | inherit | high |
+| Claude subagent (planner / implementer / reviewer / visual / worker) | Claude | frontmatter に従う | frontmatter に従う |
 | 非 UI 通常 / 軽微実装 | Codex | gpt-5.6-sol | medium |
 | 非 UI 高リスク実装 | Codex | gpt-5.6-sol | high |
-| UI / Figma / visual 実装 | Claude | opus | high |
-| `dev-task-visual-reviewer` | Claude | opus | high |
-| `dev-task-reviewer-correctness` | Claude | opus | high |
-| `dev-task-reviewer-style` | Claude | sonnet | medium |
 | Codex review 併用 | Codex | gpt-5.6-sol | high |
 
 ## High Risk
@@ -36,6 +31,4 @@
 
 ## Reviewer
 
-Codex 実装後の reviewer は Claude に寄せる。特に correctness review は Opus high を維持する。
-
-style review は Sonnet medium を標準にし、公開境界や大差分を含む場合だけ high に上げる。
+Codex 実装後の reviewer は Claude に寄せる。model / effort は各 reviewer の frontmatter に従う (correctness は Opus high、style は Opus medium が現行値)。
