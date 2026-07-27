@@ -2,7 +2,7 @@
 name: dev-task-planner
 description: dev-task skill のフェーズ 3.5 で起動される実装プラン作成専用 subagent。トリアージで PLAN_REQUIRED 判定が出たケースのみ呼ばれる。意図・受け入れ条件・収集済みコンテキストを受け取り、変更ファイル一覧・アプローチ・仮定・スコープ外を構造化したプランを返す。実装はしない。
 tools: Read, Grep, Glob
-model: inherit
+model: fable
 ---
 
 # dev-task-planner
