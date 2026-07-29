@@ -34,7 +34,7 @@ dotfiles/
 │   ├── tmux/tmux.conf       # tmux 設定 (併存期間中のみ。herdr へ移行中)
 │   └── zed/settings.json    # Zed エディタ設定 (macOS)
 ├── docs/             # 設計・移行メモ (herdr-migration.md 等)
-├── gitconfig         # Git グローバル設定
+├── gitconfig         # Git グローバル設定 (-> ~/.gitconfig; 末尾で ~/.gitconfig_local を include)
 ├── nvim/init.lua     # Neovim 設定 (lazy.nvim)
 ├── pbcopy            # pbcopy polyfill (Linux/WSL)
 ├── pbpaste           # pbpaste polyfill (Linux/WSL)
@@ -79,6 +79,7 @@ dotfiles/
 - **sheldon**: プラグイン変更後は `sheldon lock` が必要
 - **mise**: ツール追加/変更後は `mise install` で反映
 - **zshrc_local**: マシン固有設定（gitignore対象）。シェルデバッグ時は `.zshrc` から読み込まれることに注意
+- **gitconfig**: `~/.gitconfig` へ symlink されるので `git config --global` で直接書き換えず、このファイルを編集する。`$HOME` の展開が必要な設定 (git-wt の hook パス等) だけは bootstrap が `~/.gitconfig_local` へ書き出し、`gitconfig` 末尾の include で後勝ちさせる
 
 ## 主要ツールと設定のポイント
 

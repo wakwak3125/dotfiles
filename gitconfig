@@ -1,4 +1,6 @@
 # This is Git's per-user configuration file.
+# ~/.gitconfig へ symlink される (script/bootstrap.sh)。
+# 絶対パスを含むマシン固有設定は末尾で include する ~/.gitconfig_local 側に置く
 
 [include]
   path = ~/delta/themes.gitconfig
@@ -13,6 +15,9 @@
 [user]
   name = Ryo Sakaguchi
   email = rsakaguchi3125@gmail.com
+
+[ghq]
+  root = ~/src
 
 [alias]
   sw = switch
@@ -36,6 +41,7 @@
   wa = worktree add
   wr = worktree remove
   wp = worktree prune
+  wtclean = !gh poi && git worktree prune
 
 [delta]
   features = collared-trogon
@@ -49,7 +55,28 @@
   prompt = false
 
 [difftool "hunk"]
-  cmd = hunk difftool "$LOCAL" "$REMOTE" "$MERGED"
+  # パスに空白が含まれても壊れないよう、値として残す " はエスケープする
+  cmd = hunk difftool \"$LOCAL\" \"$REMOTE\" \"$MERGED\"
+
+# 空の helper で既定 (osxkeychain 等) をリセットしてから gh に委譲する。
+# gh は mise 管理なので絶対パスではなく PATH 解決させる
+[credential "https://github.com"]
+  helper =
+  helper = !gh auth git-credential
+
+[credential "https://gist.github.com"]
+  helper =
+  helper = !gh auth git-credential
+
+# worktree 配置と cd 挙動。hook (絶対パスが必要) は ~/.gitconfig_local 側で設定する
+[wt]
+  basedir = ../worktree/{gitroot}
+  nocd = create
 
 [init]
   defaultBranch = master
+
+# マシン固有設定 (git-wt の hook パス等)。後勝ちさせるため末尾に置く。
+# 存在しない場合 git は黙って無視する
+[include]
+  path = ~/.gitconfig_local
