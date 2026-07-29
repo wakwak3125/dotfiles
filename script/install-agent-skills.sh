@@ -5,6 +5,7 @@ set -Eeuo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 MANIFEST="${1:-$ROOT/agents/skills/manifest.tsv}"
+EXTERNAL_MANIFEST="${EXTERNAL_MANIFEST:-$ROOT/agents/skills/external.tsv}"
 CACHE_ROOT="${AGENT_SKILLS_CACHE_DIR:-${XDG_CACHE_HOME:-$HOME/.cache}/dotfiles-agent-skills}"
 
 warn() {
@@ -98,10 +99,25 @@ install_skill() {
   gh skill install "$stage_root" "$skill_name" --from-local --agent "$agent" --scope user --force
 }
 
+install_external_skill() {
+  # skills.sh (https://skills.sh) で外部 skill をグローバル導入する。
+  # 実体は ~/.agents/skills/<name> に置かれ、Claude Code 等へは symlink される
+  local repo="$1"
+  local skill_name="$2"
+
+  if ! command -v npx &>/dev/null; then
+    warn "npx not found, skipping external skill $repo/$skill_name"
+    return 0
+  fi
+
+  echo "==> Installing external skill $repo/$skill_name via skills.sh"
+  npx --yes skills add "$repo" --skill "$skill_name" -g
+}
+
 main() {
   require_gh_skill || return 0
 
-  local stage_root skill_path agents agent
+  local stage_root skill_path agents agent repo skill_name
   local -a agent_list
 
   stage_root="$CACHE_ROOT"
@@ -118,6 +134,16 @@ main() {
       install_skill "$stage_root" "$agent" "$skill_path"
     done
   done < "$MANIFEST"
+
+  # 外部 GitHub リポジトリ由来の skill (external.tsv で管理)
+  if [[ -f "$EXTERNAL_MANIFEST" ]]; then
+    while IFS=$'\t' read -r repo skill_name; do
+      [[ -n "$repo" ]] || continue
+      [[ "$repo" == \#* ]] && continue
+
+      install_external_skill "$repo" "$skill_name"
+    done < "$EXTERNAL_MANIFEST"
+  fi
 }
 
 main "$@"

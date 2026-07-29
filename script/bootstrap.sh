@@ -275,6 +275,27 @@ cleanup_legacy_wt() {
   rm -f "$HOME/.local/bin/wt"
 }
 
+link_hunk_skill() {
+  # hunk 同梱の review skill を Claude Code の個人 skill として登録する。
+  # `hunk skill path` は実バージョン付きパスを返すため、mise の latest symlink 配下を
+  # 優先して hunk アップグレード後もリンク切れしないようにする
+  local hunk_bin skill_dir
+  local latest_dir="$HOME/.local/share/mise/installs/npm-hunkdiff/latest/lib/node_modules/hunkdiff/skills/hunk-review"
+
+  if [[ -f "$latest_dir/SKILL.md" ]]; then
+    skill_dir="$latest_dir"
+  else
+    hunk_bin="$(command -v hunk || true)"
+    if [[ -z "$hunk_bin" ]]; then
+      echo "==> WARN: hunk not found, skipping hunk-review skill link" >&2
+      return 0
+    fi
+    skill_dir="$(dirname "$("$hunk_bin" skill path)")"
+  fi
+
+  link_dir "$skill_dir" "$HOME/.claude/skills/hunk-review"
+}
+
 configure_git() {
   # 設定の実体はリポジトリの gitconfig (= ~/.gitconfig へ symlink) 側にある。
   # ここでは $HOME の展開が必要でファイルに直書きできないものだけを
@@ -319,6 +340,9 @@ run_step "Agent skill install" install_agent_skills
 run_step "Neovim install" bash "$ROOT/script/install-neovim.sh"
 run_step "mise install bootstrap" install_mise
 run_step "mise tool install" run_mise_install
+
+# hunk 同梱 skill の登録 (mise で hunk が入った後に実行する)
+run_step "hunk skill link" link_hunk_skill
 
 # 旧 wt (自前 Go 製) は git-wt へ移行済み。残存バイナリがあれば削除する
 run_step "Legacy wt cleanup" cleanup_legacy_wt

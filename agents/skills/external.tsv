@@ -1,0 +1,6 @@
+# 外部リポジトリから skills.sh (npx skills) で導入する skill
+# gh skill は skills/<name>/SKILL.md レイアウトしか認識しないため、
+# repo 直下 SKILL.md 型の skill (herdr 等) は skills.sh で入れる。
+# -g (global) で ~/.agents/skills/ に実体、各 agent へ symlink される。
+# repo	skill
+ogulcancelik/herdr	herdr

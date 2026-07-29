@@ -18,7 +18,8 @@ dotfiles/
 │   │   ├── global/AGENTS.md      # 全プロジェクト共通の個人指示 (-> ~/.codex/AGENTS.md)
 │   │   └── org/<org>/AGENTS.md   # org 単位の個人指示 (gitignore; -> ~/src/github.com/<org>/AGENTS.md)
 │   ├── skills/       # 個人 skills (`gh skill` で Claude Code / Codex に install)
-│   │   └── manifest.tsv # skill ごとの install 先 agent 定義
+│   │   ├── manifest.tsv # skill ごとの install 先 agent 定義
+│   │   └── external.tsv # 外部 repo 由来の skill (skills.sh = `npx skills add` で導入)
 │   ├── agents/       # Claude Code subagent 定義 (spec-planner-*, japan-{ehr,receipt}-* 等)
 │   └── hooks/        # 個人 hooks (worktree-create.sh 等) ※ファイル単位で symlink
 ├── config/           # XDG_CONFIG_HOME 配下の設定
@@ -67,6 +68,7 @@ dotfiles/
 ```
 
 ### WSL2
+
 - Windows 側の WezTerm 設定は dotfiles 管理外。WSL 内の zsh/tmux/nvim/mise 等だけを管理する。
 - repo は `/mnt/c` 配下ではなく WSL filesystem 配下に置く。
 - clipboard は `win32yank.exe` があれば Neovim が優先利用し、なければ `clip.exe`/PowerShell に fallback する。
@@ -84,6 +86,7 @@ dotfiles/
 ## 主要ツールと設定のポイント
 
 ### herdr (マルチプレクサ。tmux から移行中: docs/herdr-migration.md)
+
 - prefix: `Ctrl+T`（tmux 時代を踏襲）
 - 案A「1段スライド」: workspace = repo / tab = branch・worktree / pane = 作業
 - pane 移動: Shift+矢印 / tab 移動: Alt+←→ / workspace 移動: Alt+↑↓
@@ -91,22 +94,27 @@ dotfiles/
 - tmux は併存期間中のみ残る（switcher 系スクリプトは全廃済み）
 
 ### zsh
+
 - FZF ウィジェット: `Ctrl+R`(履歴), `Ctrl+]`(ghq → herdr workspace), `Ctrl+W`(worktree → herdr tab)
 - `git wt` コマンド: git worktree ヘルパー ([k1LoW/git-wt](https://github.com/k1LoW/git-wt)、mise で導入)。worktree 配置・multiplexer 連携・cd は git config (`wt.basedir`/`wt.hook`/`wt.deletehook`/`wt.nocd`) で制御。連携の実体は `script/git-wt-herdr-hook.sh` (herdr 外では `git-wt-tmux-hook.sh` へ委譲)。マージ済み/gone ブランチの掃除は `git wtclean` (= `gh poi` + `git worktree prune`)。全リポジトリ横断は `git wtclean-all` (`script/git-wtclean-all`; worktree を持つ repo だけ対象、`-n` で dry-run)
 
 ### hunk (diff viewer。git の既定 pager)
+
 - `core.pager = hunk pager`。unified diff 以外 (`git log` 等) は `less -R` へ自動フォールバックする
 - 全画面 TUI なので diff がスクロールバックに残らない。残したいときは `git dd` / `git ds` (delta 経由)
 - PR レビューは `git hpr [<PR>]` (= `gh pr diff | hunk patch`)、ファイル単位比較は `git difftool`
+- 同梱の hunk-review skill は bootstrap が `~/.claude/skills/hunk-review` へ symlink する (mise の `latest` 配下を指すためアップグレード追従)
 - テーマは herdr と揃えて `kanagawa-wave`。設定は `config/hunk/config.toml`
 
 ### Neovim
+
 - lazy.nvim でプラグイン管理
 - 2スペースインデント、true color、system clipboard 連携
 
 ## テスト方法
 
 設定変更後の確認:
+
 1. 新しいターミナルで herdr にアタッチし設定が反映されるか確認 (`herdr server reload-config` でも可)
 2. `sheldon lock` がエラーなく完了するか確認
 3. `mise doctor` で mise の状態を確認
