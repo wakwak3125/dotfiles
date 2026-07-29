@@ -4,7 +4,9 @@
   path = ~/delta/themes.gitconfig
 
 [core]
-  pager = delta
+  # hunk pager は入力が unified diff かを判定し、diff 以外 (git log 等) は
+  # HUNK_TEXT_PAGER -> PAGER -> less -R へ自動フォールバックする
+  pager = hunk pager
   autocrlf = input
   editor = nvim
 
@@ -25,6 +27,11 @@
   poi = !gh poi
   pr-checks = !gh pr checks
   openpr = !gh pr view --web
+  # PR の diff をそのまま hunk でレビューする
+  hpr = "!f() { gh pr diff \"$@\" | hunk patch; }; f"
+  # 既定の pager は hunk (全画面 TUI)。スクロールバックに残したいときは delta
+  dd = -c core.pager=delta diff
+  ds = -c core.pager=delta show
   wl = worktree list
   wa = worktree add
   wr = worktree remove
@@ -36,6 +43,13 @@
 
 [diff]
   colorMoved = default
+  tool = hunk
+
+[difftool]
+  prompt = false
+
+[difftool "hunk"]
+  cmd = hunk difftool "$LOCAL" "$REMOTE" "$MERGED"
 
 [init]
   defaultBranch = master

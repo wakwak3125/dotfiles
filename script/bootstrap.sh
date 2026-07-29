@@ -124,6 +124,7 @@ link_common_config() {
   link_file "$ROOT/config/herdr/config.toml" "$HOME/.config/herdr/config.toml"
   link_file "$ROOT/config/sheldon/plugins.toml" "$HOME/.config/sheldon/plugins.toml"
   link_file "$ROOT/config/mise/config.toml" "$HOME/.config/mise/config.toml"
+  link_file "$ROOT/config/hunk/config.toml" "$HOME/.config/hunk/config.toml"
   link_file "$ROOT/config/starship.toml" "$HOME/.config/starship.toml"
   link_file "$ROOT/config/ccstatusline/settings.json" "$HOME/.config/ccstatusline/settings.json"
   link_file "$ROOT/config/git/ignore" "$HOME/.config/git/ignore"

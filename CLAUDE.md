@@ -25,6 +25,7 @@ dotfiles/
 │   ├── git/ignore    # グローバル gitignore
 │   ├── ccstatusline/settings.json # Claude Code ステータスライン (mise: npm:ccstatusline 経由)
 │   ├── herdr/config.toml    # herdr 設定 (prefix: Ctrl+T; tmux からの移行先)
+│   ├── hunk/config.toml     # hunk 設定 (git の既定 pager。テーマは herdr と揃えて kanagawa)
 │   ├── karabiner/    # Karabiner-Elements 設定 (macOS)
 │   ├── mise/config.toml    # ランタイム管理 (Go, Java, Node, Rust, CLI tools)
 │   ├── sheldon/plugins.toml # zsh プラグイン管理
@@ -91,6 +92,12 @@ dotfiles/
 ### zsh
 - FZF ウィジェット: `Ctrl+R`(履歴), `Ctrl+]`(ghq → herdr workspace), `Ctrl+W`(worktree → herdr tab)
 - `git wt` コマンド: git worktree ヘルパー ([k1LoW/git-wt](https://github.com/k1LoW/git-wt)、mise で導入)。worktree 配置・multiplexer 連携・cd は git config (`wt.basedir`/`wt.hook`/`wt.deletehook`/`wt.nocd`) で制御。連携の実体は `script/git-wt-herdr-hook.sh` (herdr 外では `git-wt-tmux-hook.sh` へ委譲)。マージ済み/gone ブランチの掃除は `git wtclean` (= `gh poi` + `git worktree prune`)。全リポジトリ横断は `git wtclean-all` (`script/git-wtclean-all`; worktree を持つ repo だけ対象、`-n` で dry-run)
+
+### hunk (diff viewer。git の既定 pager)
+- `core.pager = hunk pager`。unified diff 以外 (`git log` 等) は `less -R` へ自動フォールバックする
+- 全画面 TUI なので diff がスクロールバックに残らない。残したいときは `git dd` / `git ds` (delta 経由)
+- PR レビューは `git hpr [<PR>]` (= `gh pr diff | hunk patch`)、ファイル単位比較は `git difftool`
+- テーマは herdr と揃えて `kanagawa-wave`。設定は `config/hunk/config.toml`
 
 ### Neovim
 - lazy.nvim でプラグイン管理

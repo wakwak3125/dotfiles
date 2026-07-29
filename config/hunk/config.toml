@@ -1,0 +1,20 @@
+# hunk: review-first terminal diff viewer (https://hunk.dev)
+# 設定リファレンス: https://hunk.dev/docs/reference/config/
+# 優先順位: デフォルト < このファイル < リポジトリの .hunk/config.toml < CLI オプション
+
+# herdr の kanagawa テーマと配色を揃える (組込みの kanagawa dark 系)
+theme = "kanagawa-wave"
+# パネル背景を塗らず端末の背景を透かす。herdr 側の配色と馴染ませるため
+transparent_background = true
+
+# 端末幅に応じて split (左右) と stack (上下) を自動で切り替える
+mode = "auto"
+
+line_numbers = true
+# レビュー中に長い行が画面外に切れると読み落とすため折り返す
+wrap_lines = true
+hunk_headers = true
+menu_bar = true
+
+# Claude Code 等が残した agent note を最初から開いた状態にする
+agent_notes = true
