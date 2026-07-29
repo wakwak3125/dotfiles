@@ -45,7 +45,6 @@ dotfiles/
 │   ├── macos.sh             # macOS 専用セットアップ (Homebrew, GUI app config 等)
 │   ├── wsl.sh               # WSL2/Linux 専用セットアップ (apt, WSL 補助ツール等)
 │   ├── install-tools-macos.sh # macos.sh への互換ラッパー
-│   ├── mise.toml            # mise タスク定義 (ghq等; メイン設定は config/mise/config.toml)
 │   ├── git-wt-herdr-hook.sh # git-wt の herdr 連携 hook (作成/削除時に herdr tab 操作)
 │   ├── git-wt-tmux-hook.sh  # git-wt の tmux 連携 hook (herdr 外のとき herdr hook から委譲される)
 │   └── git-wtclean-all      # 全 ghq リポジトリ横断で git wtclean を実行 (git wtclean-all)
