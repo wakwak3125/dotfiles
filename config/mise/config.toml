@@ -18,6 +18,10 @@ ghq = "latest"
 stylua = "latest"
 ruff = "latest"
 golangci-lint = "latest"
+# hunk (review-first terminal diff viewer): mise に brew backend は無く、
+# 公式配布は npm (パッケージ名 hunkdiff / 実行ファイル名 hunk) と brew のみ。
+# WSL/Linux でも同じ経路で入るよう npm backend を採用。
+"npm:hunkdiff" = "latest"
 "npm:@fsouza/prettierd" = "latest"
 "npm:eslint_d" = "latest"
 "npm:ccstatusline" = "latest"

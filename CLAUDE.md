@@ -25,6 +25,7 @@ dotfiles/
 │   ├── git/ignore    # グローバル gitignore
 │   ├── ccstatusline/settings.json # Claude Code ステータスライン (mise: npm:ccstatusline 経由)
 │   ├── herdr/config.toml    # herdr 設定 (prefix: Ctrl+T; tmux からの移行先)
+│   ├── hunk/config.toml     # hunk 設定 (git の既定 pager。テーマは herdr と揃えて kanagawa)
 │   ├── karabiner/    # Karabiner-Elements 設定 (macOS)
 │   ├── mise/config.toml    # ランタイム管理 (Go, Java, Node, Rust, CLI tools)
 │   ├── sheldon/plugins.toml # zsh プラグイン管理
@@ -33,7 +34,7 @@ dotfiles/
 │   ├── tmux/tmux.conf       # tmux 設定 (併存期間中のみ。herdr へ移行中)
 │   └── zed/settings.json    # Zed エディタ設定 (macOS)
 ├── docs/             # 設計・移行メモ (herdr-migration.md 等)
-├── gitconfig         # Git グローバル設定
+├── gitconfig         # Git グローバル設定 (-> ~/.gitconfig; 末尾で ~/.gitconfig_local を include)
 ├── nvim/init.lua     # Neovim 設定 (lazy.nvim)
 ├── pbcopy            # pbcopy polyfill (Linux/WSL)
 ├── pbpaste           # pbpaste polyfill (Linux/WSL)
@@ -45,7 +46,6 @@ dotfiles/
 │   ├── macos.sh             # macOS 専用セットアップ (Homebrew, GUI app config 等)
 │   ├── wsl.sh               # WSL2/Linux 専用セットアップ (apt, WSL 補助ツール等)
 │   ├── install-tools-macos.sh # macos.sh への互換ラッパー
-│   ├── mise.toml            # mise タスク定義 (ghq等; メイン設定は config/mise/config.toml)
 │   ├── git-wt-herdr-hook.sh # git-wt の herdr 連携 hook (作成/削除時に herdr tab 操作)
 │   ├── git-wt-tmux-hook.sh  # git-wt の tmux 連携 hook (herdr 外のとき herdr hook から委譲される)
 │   └── git-wtclean-all      # 全 ghq リポジトリ横断で git wtclean を実行 (git wtclean-all)
@@ -79,6 +79,7 @@ dotfiles/
 - **sheldon**: プラグイン変更後は `sheldon lock` が必要
 - **mise**: ツール追加/変更後は `mise install` で反映
 - **zshrc_local**: マシン固有設定（gitignore対象）。シェルデバッグ時は `.zshrc` から読み込まれることに注意
+- **gitconfig**: `~/.gitconfig` へ symlink されるので `git config --global` で直接書き換えず、このファイルを編集する。`$HOME` の展開が必要な設定 (git-wt の hook パス等) だけは bootstrap が `~/.gitconfig_local` へ書き出し、`gitconfig` 末尾の include で後勝ちさせる
 
 ## 主要ツールと設定のポイント
 
@@ -92,6 +93,12 @@ dotfiles/
 ### zsh
 - FZF ウィジェット: `Ctrl+R`(履歴), `Ctrl+]`(ghq → herdr workspace), `Ctrl+W`(worktree → herdr tab)
 - `git wt` コマンド: git worktree ヘルパー ([k1LoW/git-wt](https://github.com/k1LoW/git-wt)、mise で導入)。worktree 配置・multiplexer 連携・cd は git config (`wt.basedir`/`wt.hook`/`wt.deletehook`/`wt.nocd`) で制御。連携の実体は `script/git-wt-herdr-hook.sh` (herdr 外では `git-wt-tmux-hook.sh` へ委譲)。マージ済み/gone ブランチの掃除は `git wtclean` (= `gh poi` + `git worktree prune`)。全リポジトリ横断は `git wtclean-all` (`script/git-wtclean-all`; worktree を持つ repo だけ対象、`-n` で dry-run)
+
+### hunk (diff viewer。git の既定 pager)
+- `core.pager = hunk pager`。unified diff 以外 (`git log` 等) は `less -R` へ自動フォールバックする
+- 全画面 TUI なので diff がスクロールバックに残らない。残したいときは `git dd` / `git ds` (delta 経由)
+- PR レビューは `git hpr [<PR>]` (= `gh pr diff | hunk patch`)、ファイル単位比較は `git difftool`
+- テーマは herdr と揃えて `kanagawa-wave`。設定は `config/hunk/config.toml`
 
 ### Neovim
 - lazy.nvim でプラグイン管理

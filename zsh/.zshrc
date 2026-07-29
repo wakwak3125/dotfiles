@@ -7,6 +7,11 @@ fpath=(
 
 ## Env
 command -v sheldon >/dev/null 2>&1 && eval "$(sheldon source)"
+
+# マシン固有設定 (Homebrew / gcloud 等の PATH 追加) は mise activate より前に読む。
+# 逆順だと system 側のツールが mise 管理版より優先される (mise doctor が警告する)
+[[ -f "$ZDOTDIR/.zshrc_local" ]] && source "$ZDOTDIR/.zshrc_local"
+
 _mise_bin=""
 if [[ -x "$HOME/.local/bin/mise" ]]; then
   _mise_bin="$HOME/.local/bin/mise"
@@ -15,17 +20,15 @@ elif command -v mise >/dev/null 2>&1; then
 fi
 if [[ -n "$_mise_bin" ]]; then
   eval "$("$_mise_bin" activate zsh)"
-fi
-command -v direnv >/dev/null 2>&1 && eval "$(direnv hook zsh)"
-# git-wt: git worktree ヘルパー。git() ラッパー関数と補完を有効化 (未インストール時はスキップ)
-command -v git-wt >/dev/null 2>&1 && eval "$(git-wt --init zsh)"
-if [[ -n "$_mise_bin" ]]; then
   JAVA_HOME="$("$_mise_bin" where java 2>/dev/null || true)"
   [[ -n "$JAVA_HOME" ]] && export JAVA_HOME
 fi
 unset _mise_bin
 
-[[ -f "$ZDOTDIR/.zshrc_local" ]] && source "$ZDOTDIR/.zshrc_local"
+# 以下は mise 管理のツール (git-wt 等) を参照するため mise activate の後に置く
+command -v direnv >/dev/null 2>&1 && eval "$(direnv hook zsh)"
+# git-wt: git worktree ヘルパー。git() ラッパー関数と補完を有効化 (未インストール時はスキップ)
+command -v git-wt >/dev/null 2>&1 && eval "$(git-wt --init zsh)"
 
 bindkey -e
 autoload -Uz add-zsh-hook

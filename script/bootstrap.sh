@@ -113,7 +113,19 @@ run_platform_setup() {
   esac
 }
 
+link_gitconfig() {
+  # 従来は git config --global で ~/.gitconfig を直接育てていたため、実ファイルが
+  # 残っているマシンがある。symlink へ置き換える前に退避して設定を失わないようにする
+  if [[ -e "$HOME/.gitconfig" && ! -L "$HOME/.gitconfig" ]]; then
+    local backup="$HOME/.gitconfig.bak.$(date +%Y%m%d%H%M%S)"
+    mv "$HOME/.gitconfig" "$backup"
+    echo "==> existing ~/.gitconfig moved to $backup" >&2
+  fi
+  link_file "$ROOT/gitconfig" "$HOME/.gitconfig"
+}
+
 link_common_config() {
+  link_gitconfig
   link_file "$ROOT/ideavimrc" "$HOME/.ideavimrc"
   link_file "$ROOT/obsidian.vimrc" "$HOME/.obsidian.vimrc"
   link_dir "$ROOT/zsh" "$HOME/.zsh"
@@ -124,6 +136,7 @@ link_common_config() {
   link_file "$ROOT/config/herdr/config.toml" "$HOME/.config/herdr/config.toml"
   link_file "$ROOT/config/sheldon/plugins.toml" "$HOME/.config/sheldon/plugins.toml"
   link_file "$ROOT/config/mise/config.toml" "$HOME/.config/mise/config.toml"
+  link_file "$ROOT/config/hunk/config.toml" "$HOME/.config/hunk/config.toml"
   link_file "$ROOT/config/starship.toml" "$HOME/.config/starship.toml"
   link_file "$ROOT/config/ccstatusline/settings.json" "$HOME/.config/ccstatusline/settings.json"
   link_file "$ROOT/config/git/ignore" "$HOME/.config/git/ignore"
@@ -263,21 +276,16 @@ cleanup_legacy_wt() {
 }
 
 configure_git() {
-  # gitの設定
-  git config --global user.name "Ryo Sakaguchi"
-  git config --global user.email "rsakaguchi3125@gmail.com"
-  git config --global ghq.root "$HOME/src"
+  # 設定の実体はリポジトリの gitconfig (= ~/.gitconfig へ symlink) 側にある。
+  # ここでは $HOME の展開が必要でファイルに直書きできないものだけを
+  # ~/.gitconfig_local へ書き出す (gitconfig の末尾で include される)。
+  # set (--add ではない) なので bootstrap 再実行でも重複しない。
+  local hook="$HOME/.local/bin/git-wt-herdr-hook.sh"
 
-  # git-wt (git worktree ヘルパー) のグローバル設定
-  # worktree 配置を <repo親>/worktree/<repo名> に揃え、herdr 連携 hook を登録する。
+  # git-wt の worktree 作成/削除に herdr 連携 hook を登録する
   # (herdr hook は herdr 外だと tmux hook へ委譲するので併存期間も両対応)
-  # いずれも set (--add ではない) なので bootstrap 再実行でも重複しない。
-  git config --global wt.basedir "../worktree/{gitroot}"
-  git config --global wt.nocd create
-  git config --global wt.hook "$HOME/.local/bin/git-wt-herdr-hook.sh add"
-  git config --global wt.deletehook "$HOME/.local/bin/git-wt-herdr-hook.sh delete"
-  # マージ済み/gone ブランチの掃除 (旧 wt clean の代替): gh poi + worktree prune
-  git config --global alias.wtclean "!gh poi && git worktree prune"
+  git config --file "$HOME/.gitconfig_local" wt.hook "$hook add"
+  git config --file "$HOME/.gitconfig_local" wt.deletehook "$hook delete"
 }
 
 run_step "Platform setup" run_platform_setup
