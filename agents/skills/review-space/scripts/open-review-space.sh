@@ -57,7 +57,7 @@ branch_short="${branch##*/}"
 merge_base=""
 if [[ -n "$pr" ]]; then
   mode="pr"
-  tab_label="review:pr${pr}"
+  tab_label="review:#${pr}"
   target_desc="PR #${pr}"
   hunk_cmd="gh pr diff $pr | hunk patch"
 else

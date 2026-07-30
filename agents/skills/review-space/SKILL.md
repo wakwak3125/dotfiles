@@ -9,7 +9,7 @@ description: "コードレビュー環境を herdr 上に一発構築する。re
 
 - 同じ repo の workspace (案A 規約: workspace = repo 名) があればそこへ、なければ workspace を作ってから、review tab を追加して focus する
 - 左 pane: hunk で diff を表示
-  - PR モード: `gh pr diff <PR> | hunk patch` (tab 名 `review:pr<N>`)
+  - PR モード: `gh pr diff <PR> | hunk patch` (tab 名 `review:#<N>`)
   - diff モード (PR なし): `hunk diff --watch <merge-base>` でベースブランチ比較、未コミット・未追跡の変更も含み、コード変更は diff へ自動反映される (tab 名 `review:<base>..<branch>`)
 - 右 pane: Claude Code を起動し、hunk セッションにインラインレビューコメントを書くプロンプトを投入
 - ユーザーは左の hunk でコメントを眺めながらレビューできる
