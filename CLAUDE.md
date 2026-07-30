@@ -96,7 +96,7 @@ dotfiles/
 ### zsh
 
 - FZF ウィジェット: `Ctrl+R`(履歴), `Ctrl+]`(ghq → herdr workspace), `Ctrl+W`(worktree → herdr tab)
-- `git wt` コマンド: git worktree ヘルパー ([k1LoW/git-wt](https://github.com/k1LoW/git-wt)、mise で導入)。worktree 配置・multiplexer 連携・cd は git config (`wt.basedir`/`wt.hook`/`wt.deletehook`/`wt.nocd`) で制御。連携の実体は `script/git-wt-herdr-hook.sh` (herdr 外では `git-wt-tmux-hook.sh` へ委譲)。マージ済み/gone ブランチの掃除は `git wtclean` (= `gh poi` + `git worktree prune`)。全リポジトリ横断は `git wtclean-all` (`script/git-wtclean-all`; worktree を持つ repo だけ対象、`-n` で dry-run)
+- `git wt` コマンド: git worktree ヘルパー ([k1LoW/git-wt](https://github.com/k1LoW/git-wt)、mise で導入)。worktree 配置・multiplexer 連携・cd は git config (`wt.basedir`/`wt.hook`/`wt.deletehook`/`wt.nocd`) で制御。連携の実体は `script/git-wt-herdr-hook.sh` (herdr 外では `git-wt-tmux-hook.sh` へ委譲)。エージェント (Claude Code / Codex) が `git wt` した場合は tab/workspace を作らない (`GIT_WT_MUX_HOOK=1` で強制可)。マージ済み/gone ブランチの掃除は `git wtclean` (= `gh poi` + `git worktree prune`)。全リポジトリ横断は `git wtclean-all` (`script/git-wtclean-all`; worktree を持つ repo だけ対象、`-n` で dry-run)
 
 ### hunk (diff viewer。git の既定 pager)
 

@@ -10,6 +10,16 @@ set -uo pipefail
 
 mode="${1:-}"
 
+# エージェント (Claude Code / Codex) が git wt した場合は tab/workspace を作らない。
+# 複数リポジトリを触るタスクで無関係な space/tab が量産されるのを防ぐため。
+# エージェント経由でも作らせたいときは GIT_WT_MUX_HOOK=1 を付けて実行する。
+# delete はガードしない: worktree が消えた tab は誰が消しても掃除したい。
+if [[ "$mode" == "add" && "${GIT_WT_MUX_HOOK:-}" != "1" ]]; then
+  if [[ -n "${CLAUDECODE:-}" || -n "${AI_AGENT:-}" || -n "${CODEX_SANDBOX:-}" ]]; then
+    exit 0
+  fi
+fi
+
 # herdr 外では旧 tmux hook に委譲する (移行完了までの併存)
 if [[ -z "${HERDR_ENV:-}" ]]; then
   tmux_hook="$HOME/.local/bin/git-wt-tmux-hook.sh"
