@@ -121,12 +121,13 @@ fi
 # herdr は tab label を branch 名で自動上書きするため label は当てにならない
 existing_agent_pane="$(herdr agent list | jq -r --arg n "$agent_name" '.result.agents[] | select(.name == $n) | .pane_id' | head -1)"
 if [[ -n "$existing_agent_pane" ]]; then
-  herdr agent focus "$agent_name" >/dev/null
-  echo "既存のレビュー agent $agent_name (pane $existing_agent_pane) に focus した。作り直す場合は先にその tab を閉じること"
+  echo "レビュー agent $agent_name が既に pane $existing_agent_pane で動いている。作り直す場合は先にその tab を閉じること"
   exit 0
 fi
 
-created="$(herdr tab create --workspace "$ws_id" --cwd "$repo" --label "$tab_label" --focus)"
+# ユーザーの現在の画面を奪わないよう、作成は全て no-focus で行う。
+# tab が UI focus されていなければ agent start も tab 内 focus (hunk 側) を動かさない
+created="$(herdr tab create --workspace "$ws_id" --cwd "$repo" --label "$tab_label" --no-focus)"
 tab_id="$(jq -r '.result.tab.tab_id' <<<"$created")"
 hunk_pane="$(jq -r '.result.root_pane.pane_id' <<<"$created")"
 [[ -n "$tab_id" && -n "$hunk_pane" ]] || die "tab 作成に失敗: $created"
@@ -210,10 +211,7 @@ cleanup_tab_id=""
 # レビュー対象が一目でわかるよう tab をラベル付けする。pane 起動中は worktree 統合の
 # 自動タイトル (branch 名) に上書きされるため、起動が落ち着いたこの時点で行う
 herdr tab rename "$tab_id" "$tab_label" >/dev/null 2>&1 || true
-
-# agent start が tab 内 focus を agent pane へ移すため hunk 側へ戻す。
-# ここが agent 側のままだとユーザーのキー入力が hunk に届かず「ショートカットが効かない」状態になる
-herdr pane focus --direction left --pane "$agent_pane" >/dev/null 2>&1 || true
+# 注意: pane focus / tab focus はここで使わない。UI focus ごとユーザーを引っ張ってしまう
 
 cat <<EOF
 レビュー tab を作成した:
@@ -223,5 +221,6 @@ cat <<EOF
   hunk session:   ${hunk_session:-"(ID 特定失敗: --repo で fallback)"}
   agent:          $agent_name (pane $agent_pane, レビュー実行中)
 対象: $target_desc
+focus は移していない。移動: herdr tab focus $tab_id (または Alt+←→)
 進捗確認: herdr agent get $agent_name / herdr agent read $agent_name --source recent-unwrapped --lines 80
 EOF

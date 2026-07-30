@@ -7,7 +7,7 @@ description: "コードレビュー環境を herdr 上に一発構築する。re
 
 コードレビュー用の herdr tab を一発で組み立てる skill。
 
-- 同じ repo の workspace (案A 規約: workspace = repo 名) があればそこへ、なければ workspace を作ってから、review tab を追加して focus する
+- 同じ repo の workspace (案A 規約: workspace = repo 名) があればそこへ、なければ workspace を作ってから、review tab を追加する。作成は全て no-focus で行い、ユーザーの現在の画面は奪わない (移動は Alt+←→ か `herdr tab focus`)
 - 左 pane: hunk で diff を表示
   - PR モード: `gh pr diff <PR> | hunk patch` (tab 名 `review:#<N>`)
   - diff モード (PR なし): `hunk diff --watch <merge-base>` でベースブランチ比較、未コミット・未追跡の変更も含み、コード変更は diff へ自動反映される (tab 名 `review:<base>..<branch>`)
@@ -24,7 +24,7 @@ bash <skill-dir>/scripts/open-review-space.sh [-C <repo-dir>] [PR番号]
 
 - `PR番号` 省略時はカレントブランチの PR を `gh pr view` で解決し、なければ diff モードに自動で切り替わる
 - `-C <repo-dir>`: 対象リポジトリ (worktree) の外から呼ぶときに指定する
-- 再実行は冪等: 同名のレビュアー agent が生きていればその pane に focus するだけで作り直さない (判定はレビュー対象から決定的に生成する agent 名で行う)
+- 再実行は冪等: 同名のレビュアー agent が生きていれば場所を案内するだけで作り直さない (判定はレビュー対象から決定的に生成する agent 名で行う)
 
 実行後はスクリプトの出力 (workspace / tab / pane / agent 名) をそのままユーザーに報告して終了する。**レビュー完了を待たないこと** — レビュアー agent はバックグラウンドで動き続ける。
 
