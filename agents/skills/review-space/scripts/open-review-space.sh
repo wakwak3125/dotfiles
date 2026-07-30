@@ -11,10 +11,13 @@
 
 set -euo pipefail
 
+# tab 作成後に失敗した場合は中途半端な tab を残さず、再実行を安全にする。
+# die() 経由に限らず set -e の暗黙 exit でも走るよう EXIT trap で行う
+cleanup_tab_id=""
+trap '[[ -n "$cleanup_tab_id" ]] && herdr tab close "$cleanup_tab_id" >/dev/null 2>&1 || true' EXIT
+
 die() {
   echo "error: $*" >&2
-  # tab 作成後に失敗した場合は中途半端な tab を残さず、再実行を安全にする
-  [[ -n "${cleanup_tab_id:-}" ]] && herdr tab close "$cleanup_tab_id" >/dev/null 2>&1
   exit 1
 }
 
@@ -46,8 +49,12 @@ if [[ -z "$pr" ]]; then
   # PR がなければエラーにせず diff モード (PR 作成前のセルフレビュー) に落とす。
   # merged/closed も返ってくるので open な PR だけを対象にする
   pr="$(gh pr view --json number,state --jq 'select(.state == "OPEN") | .number' 2>/dev/null || true)"
+else
+  [[ "$pr" =~ ^[0-9]+$ ]] || die "PR 番号が不正: $pr"
+  # 存在しない番号だと後段の gh pr diff の失敗が「hunk の起動を確認できない」に
+  # 化けて原因を追いにくいため、ここで検証して具体的なエラーで止める
+  gh pr view "$pr" --json number >/dev/null 2>&1 || die "PR #$pr を取得できない (番号と gh auth を確認すること)"
 fi
-[[ -z "$pr" || "$pr" =~ ^[0-9]+$ ]] || die "PR 番号が不正: $pr"
 
 repo_name="$(basename "$repo")"
 branch="$(git branch --show-current 2>/dev/null)"
@@ -59,7 +66,10 @@ if [[ -n "$pr" ]]; then
   mode="pr"
   tab_label="review:#${pr}"
   target_desc="PR #${pr}"
-  hunk_cmd="gh pr diff $pr | hunk patch"
+  # stdin パイプだと hunk がキーボードを読めなくなる (stdin が TTY でなくなる) ため、
+  # patch は一時ファイルに落としてから開く
+  patch_file="${TMPDIR:-/tmp}/review-space-$(printf '%s' "$repo_name" | tr -c 'a-zA-Z0-9_-' '-')-pr${pr}.patch"
+  hunk_cmd="gh pr diff $pr > \"$patch_file\" && hunk patch \"$patch_file\""
 else
   mode="diff"
   # ベースブランチは origin/HEAD -> gh -> main/master の順で解決する
@@ -162,17 +172,21 @@ start_hunk() {
 }
 start_hunk || start_hunk || die "hunk の起動を確認できない (pane $hunk_pane)"
 
-# 今回の pane が張った hunk セッション ID を特定する (取れなければ --repo 指定に fallback)
+# 今回の pane が張った hunk セッション ID を特定する (取れなければ --repo 指定に fallback)。
+# 待機中に別の場所で hunk が開かれても誤って掴まないよう cwd でも絞り込む
 hunk_session=""
 for _ in $(seq 1 10); do
-  hunk_session="$(hunk session list --json 2>/dev/null | jq -r '.sessions[].sessionId' 2>/dev/null | grep -vxF -f <(printf '%s\n' "$sessions_before") | head -1 || true)"
+  hunk_session="$(hunk session list --json 2>/dev/null \
+    | jq -r --arg cwd "$repo" '.sessions[] | select(.cwd == $cwd) | .sessionId' 2>/dev/null \
+    | grep -vxF -f <(printf '%s\n' "$sessions_before") | head -1 || true)"
   [[ -n "$hunk_session" ]] && break
   sleep 0.5
 done
 if [[ -n "$hunk_session" ]]; then
   sess_sel="$hunk_session"
 else
-  sess_sel="--repo ${repo}"
+  # プロンプトへそのまま埋め込まれるため、空白入りパスでも壊れないようクォート込みにする
+  sess_sel="--repo \"${repo}\""
 fi
 
 if [[ "$mode" == "pr" ]]; then
