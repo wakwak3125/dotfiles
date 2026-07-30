@@ -66,10 +66,7 @@ if [[ -n "$pr" ]]; then
   mode="pr"
   tab_label="review:#${pr}"
   target_desc="PR #${pr}"
-  # stdin パイプだと hunk がキーボードを読めなくなる (stdin が TTY でなくなる) ため、
-  # patch は一時ファイルに落としてから開く
-  patch_file="${TMPDIR:-/tmp}/review-space-$(printf '%s' "$repo_name" | tr -c 'a-zA-Z0-9_-' '-')-pr${pr}.patch"
-  hunk_cmd="gh pr diff $pr > \"$patch_file\" && hunk patch \"$patch_file\""
+  hunk_cmd="gh pr diff $pr | hunk patch"
 else
   mode="diff"
   # ベースブランチは origin/HEAD -> gh -> main/master の順で解決する
@@ -213,6 +210,10 @@ cleanup_tab_id=""
 # レビュー対象が一目でわかるよう tab をラベル付けする。pane 起動中は worktree 統合の
 # 自動タイトル (branch 名) に上書きされるため、起動が落ち着いたこの時点で行う
 herdr tab rename "$tab_id" "$tab_label" >/dev/null 2>&1 || true
+
+# agent start が tab 内 focus を agent pane へ移すため hunk 側へ戻す。
+# ここが agent 側のままだとユーザーのキー入力が hunk に届かず「ショートカットが効かない」状態になる
+herdr pane focus --direction left --pane "$agent_pane" >/dev/null 2>&1 || true
 
 cat <<EOF
 レビュー tab を作成した:
