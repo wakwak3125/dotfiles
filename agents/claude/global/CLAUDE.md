@@ -41,8 +41,27 @@ CLAUDE.md (Claude Code) と AGENTS.md (Codex) は同一内容を保つこと。�
 - 作業前に origin のベースブランチで rebase すること
 - ブランチ名は wakwak3125/ を prefix とし、ケバブケースで命名すること (例: wakwak3125/awsome-feature)。org のリポジトリでチケット ID 起点の命名規約がある場合は org 設定に従う
 - **worktree ベース開発**: `git wt` ([k1LoW/git-wt](https://github.com/k1LoW/git-wt)) で管理。worktree は `<org>/worktree/<repo>/` に格納 (例: `wakwak3125/worktree/dotfiles/`)。マージ済み/gone ブランチの掃除は `git wtclean`
-- **PR 作成**: `gh pr create` を使用
+- **PR 作成**: `gh pr create` を使用する。
 - push する際、origin のベースブランチと比較し、rebase が必要な場合は必ず rebase の上 push すること
+
+## PR作成
+
+PR は次のテンプレートで書き、かならず /japanese-tech-writing のスキルを利用すること。
+
+```
+## 概要
+この変更を入れる理由となる事柄や関連Issueやチケット、Slackリンクなど参考情報となるもの
+
+## 変更内容
+何を実施したかを簡潔に書く。設計判断がある場合は別のセクションを用意して書く。その際はH3を利用すること。
+
+### 検証項目
+このPRで検証するべきテスト項目を列挙する。自動テストで検証済みのモノはチェックをいれる。
+
+### レビュアーへの依頼
+このPRをレビューするにあたり、チェックしてほしい箇所や注意すべき点があればこちらに記載する。
+
+```
 
 ## Auto memory 運用方針 (Claude Code 固有)
 
