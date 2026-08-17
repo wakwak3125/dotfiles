@@ -37,7 +37,7 @@ split_vertical = "prefix+|"
 prompt_new_tab_name = false
 
 show_agent_labels_on_pane_borders = false
-agent_panel_sort = "spaces"
+agent_panel_sort = "priority"
 
 # バックグラウンド workspace のエージェント状態変化を in-app toast で通知
 [ui.toast]
