@@ -337,3 +337,8 @@ fi
 if command -v henry-preview >/dev/null 2>&1; then
   source <(henry-preview completion zsh)
 fi
+# The following lines have been added by Docker Desktop to enable Docker CLI completions.
+fpath=(/Users/wakwak/.docker/completions $fpath)
+autoload -Uz compinit
+compinit
+# End of Docker CLI completions
