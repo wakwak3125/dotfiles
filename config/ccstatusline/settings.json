@@ -21,6 +21,8 @@
       { "id": "23", "type": "separator" },
       { "id": "24", "type": "weekly-usage", "color": "brightMagenta" },
       { "id": "25", "type": "separator" },
+      { "id": "31", "type": "fable-weekly-usage", "color": "brightYellow" },
+      { "id": "32", "type": "separator" },
       { "id": "26", "type": "weekly-reset-timer", "color": "brightBlack" },
       { "id": "27", "type": "separator" },
       { "id": "28", "type": "session-clock", "color": "brightBlack" },
