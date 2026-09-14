@@ -1,0 +1,6 @@
+# performance: ビルド / CUDA 等で性能が必要なとき。CPU は BIOS 上限、GPU は既定値
+CPU_EPP=performance
+CPU_MAX_FREQ_KHZ=max
+# default と書くと nvidia-smi の Default Power Limit を採用する
+GPU_POWER_LIMIT_W=default
+FAN_PROFILE=performance

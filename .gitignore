@@ -18,3 +18,5 @@ agents/codex/org/
 # legacy paths before restructuring
 agents/orgs/
 /claude/
+# ローカル専用の設計メモ・タスク置き場 (IP やホスト名など公開したくない情報を含むため追跡しない)
+local/
