@@ -27,7 +27,7 @@ require("lazy").setup({
     -- import your plugins
     { import = "plugins" },
   },
-  -- automatically check for plugin updates
-  checker = { enabled = true },
+  -- 更新確認は裏で続け、起動のたびに通知は出さない (更新有無は :Lazy で確認する)
+  checker = { enabled = true, notify = false },
 })
 
