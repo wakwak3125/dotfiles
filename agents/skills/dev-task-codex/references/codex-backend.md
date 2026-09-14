@@ -34,7 +34,7 @@ codex exec \
 
 ## Profiles
 
-Profile は dotfiles の `config/codex/*.config.toml` で管理し、`script/bootstrap.sh` が `~/.codex/*.config.toml` へ symlink する。
+Profile は dotfiles の `config/codex/*.config.toml` で管理し、`script/bootstrap.sh` が `${HOME}` を実パスへ展開して `~/.codex/*.config.toml` へ書き出す (skill path は絶対パスが必要で、macOS / Linux でホームが異なるため symlink しない)。
 
 `config/codex/dev-task-implementer.config.toml`:
 
@@ -43,7 +43,7 @@ model = "gpt-5.6-sol"
 model_reasoning_effort = "medium"
 
 [[skills.config]]
-path = "/Users/wakwak/.codex/skills/dev-task/SKILL.md"
+path = "${HOME}/.codex/skills/dev-task/SKILL.md"
 enabled = false
 ```
 
@@ -54,7 +54,7 @@ model = "gpt-5.6-sol"
 model_reasoning_effort = "high"
 
 [[skills.config]]
-path = "/Users/wakwak/.codex/skills/dev-task/SKILL.md"
+path = "${HOME}/.codex/skills/dev-task/SKILL.md"
 enabled = false
 ```
 

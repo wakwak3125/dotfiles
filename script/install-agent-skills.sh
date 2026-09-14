@@ -111,7 +111,9 @@ install_external_skill() {
   fi
 
   echo "==> Installing external skill $repo/$skill_name via skills.sh"
-  npx --yes skills add "$repo" --skill "$skill_name" -g
+  # -y: 端末から実行すると確認プロンプトで止まるため抑止する
+  # -a: 未指定だと検出した全 agent (PromptScript 等 global 非対応を含む) に入れようとするため絞る
+  npx --yes skills add "$repo" --skill "$skill_name" -g -y -a claude-code codex
 }
 
 main() {

@@ -32,7 +32,7 @@ is_pane_alive() {
 
 # jq チェック
 if ! command -v jq &>/dev/null; then
-  echo "エラー: jq が必要です (brew install jq)" >&2
+  echo "エラー: jq が必要です (macOS: brew install jq / Ubuntu: sudo apt install jq)" >&2
   exit 1
 fi
 

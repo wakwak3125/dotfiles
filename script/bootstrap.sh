@@ -100,12 +100,8 @@ run_platform_setup() {
       bash "$ROOT/script/macos.sh"
       ;;
     Linux)
-      if is_wsl; then
-        bash "$ROOT/script/wsl.sh"
-      else
-        echo "==> Linux detected outside WSL; applying WSL-compatible Linux setup"
-        bash "$ROOT/script/wsl.sh"
-      fi
+      # Ubuntu ネイティブ / WSL2 共通。WSL 固有の処理は linux.sh 内で分岐する
+      bash "$ROOT/script/linux.sh"
       ;;
     *)
       echo "==> WARN: unsupported OS: $OS. Running common setup only." >&2
@@ -140,9 +136,20 @@ link_common_config() {
   link_file "$ROOT/config/starship.toml" "$HOME/.config/starship.toml"
   link_file "$ROOT/config/ccstatusline/settings.json" "$HOME/.config/ccstatusline/settings.json"
   link_file "$ROOT/config/git/ignore" "$HOME/.config/git/ignore"
+}
 
-  link_file "$ROOT/config/codex/dev-task-implementer.config.toml" "$HOME/.codex/dev-task-implementer.config.toml"
-  link_file "$ROOT/config/codex/dev-task-implementer-heavy.config.toml" "$HOME/.codex/dev-task-implementer-heavy.config.toml"
+render_codex_profiles() {
+  # Codex profile は skill の絶対パスを要するため symlink せず、${HOME} を展開して書き出す
+  local src dest
+  ensure_dir "$HOME/.codex"
+  for src in "$ROOT"/config/codex/*.config.toml; do
+    [[ -f "$src" ]] || continue
+    dest="$HOME/.codex/$(basename "$src")"
+    # 旧来の symlink 越しに書き込むとリポジトリ側を上書きしてしまうので先に消す
+    rm -f "$dest"
+    sed "s|\${HOME}|$HOME|g" "$src" > "$dest"
+    echo "$dest was rendered"
+  done
 }
 
 link_linux_clipboard_tools() {
@@ -271,6 +278,33 @@ run_mise_install() {
   fi
 }
 
+export_tool_paths() {
+  # 初回セットアップでは mise 管理の gh / npx / hunk がまだ PATH に無いので、
+  # 以降の step (skill install 等) から見えるようにする
+  export PATH="$HOME/.local/bin:$HOME/.local/share/mise/shims:$PATH"
+}
+
+setup_ghq() {
+  # ghq 本体は mise、root (~/src) は gitconfig の [ghq] で設定済み。
+  # ここでは root を作成し、symlink された gitconfig が効いているかを確認する
+  local expected="$HOME/src"
+  local actual
+
+  ensure_dir "$expected"
+
+  if ! command -v ghq &>/dev/null; then
+    echo "==> WARN: ghq not found, skipping ghq root check (run mise install and re-run)" >&2
+    return 0
+  fi
+
+  actual="$(ghq root)"
+  if [[ "$actual" != "$expected" ]]; then
+    echo "==> WARN: ghq root is $actual (expected $expected). Check [ghq] root in ~/.gitconfig" >&2
+    return 0
+  fi
+  echo "==> ghq root: $actual"
+}
+
 cleanup_legacy_wt() {
   rm -f "$HOME/.local/bin/wt"
 }
@@ -315,6 +349,7 @@ run_step "Platform setup" run_platform_setup
 # 共通 symlink
 # ================================================
 run_step "Common config symlinks" link_common_config
+run_step "Codex profile render" render_codex_profiles
 
 # Linux/WSL 用 pbcopy/pbpaste polyfill。macOS の /usr/bin/pbcopy は上書きしない。
 run_step "Linux clipboard tools" link_linux_clipboard_tools
@@ -332,7 +367,6 @@ run_step "Claude runtime config symlinks" link_claude_config
 run_step "Agent global docs symlinks" link_agent_global_docs
 run_step "Agent org docs symlinks" link_agent_org_docs
 run_step "Claude settings merge" merge_claude_settings
-run_step "Agent skill install" install_agent_skills
 
 # ================================================
 # ツールのインストール
@@ -340,6 +374,13 @@ run_step "Agent skill install" install_agent_skills
 run_step "Neovim install" bash "$ROOT/script/install-neovim.sh"
 run_step "mise install bootstrap" install_mise
 run_step "mise tool install" run_mise_install
+export_tool_paths
+
+# ghq root (~/src) の作成と設定確認 (mise で ghq が入った後に実行する)
+run_step "ghq setup" setup_ghq
+
+# gh skill を使うため mise で gh が入った後に実行する
+run_step "Agent skill install" install_agent_skills
 
 # hunk 同梱 skill の登録 (mise で hunk が入った後に実行する)
 run_step "hunk skill link" link_hunk_skill

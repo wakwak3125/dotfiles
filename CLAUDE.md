@@ -2,9 +2,9 @@
 
 ## 概要
 
-macOS / WSL2/Linux 両対応の dotfiles リポジトリ。
+macOS / Ubuntu (ネイティブ・WSL2) 対応の dotfiles リポジトリ。
 シェル、エディタ、ターミナル、開発ツールの設定を一元管理する。
-Windows 側ターミナル (WezTerm 等) の設定はこのリポジトリでは管理せず、WSL 内の CLI 環境を対象にする。
+WSL2 の場合、Windows 側ターミナル (WezTerm 等) の設定はこのリポジトリでは管理せず、WSL 内の CLI 環境を対象にする。
 
 ## ディレクトリ構成
 
@@ -31,9 +31,11 @@ dotfiles/
 │   ├── mise/config.toml    # ランタイム管理 (Go, Java, Node, Rust, CLI tools)
 │   ├── sheldon/plugins.toml # zsh プラグイン管理
 │   ├── starship.toml        # プロンプトテーマ
-│   ├── terminator/   # Terminator 設定 (Linux)
+│   ├── codex/*.config.toml  # Codex profile (bootstrap が ${HOME} を展開して ~/.codex へ書き出す)
+│   ├── ghostty/config       # Ghostty 設定 (macOS / Ubuntu デスクトップ)
+│   ├── terminator/   # Terminator 設定 (Ubuntu デスクトップ)
 │   ├── tmux/tmux.conf       # tmux 設定 (併存期間中のみ。herdr へ移行中)
-│   └── zed/settings.json    # Zed エディタ設定 (macOS)
+│   └── zed/settings.json    # Zed エディタ設定 (macOS / Ubuntu デスクトップ)
 ├── docs/             # 設計・移行メモ (herdr-migration.md 等)
 ├── gitconfig         # Git グローバル設定 (-> ~/.gitconfig; 末尾で ~/.gitconfig_local を include)
 ├── nvim/init.lua     # Neovim 設定 (lazy.nvim)
@@ -45,7 +47,8 @@ dotfiles/
 │   ├── install-agent-skills.sh # `gh skill` による個人 skills インストール
 │   ├── install-neovim.sh    # Neovim インストーラ
 │   ├── macos.sh             # macOS 専用セットアップ (Homebrew, GUI app config 等)
-│   ├── wsl.sh               # WSL2/Linux 専用セットアップ (apt, WSL 補助ツール等)
+│   ├── linux.sh             # Ubuntu (ネイティブ/WSL2) 専用セットアップ (apt, sheldon, zsh へ chsh, デスクトップ時は GUI app config/GNOME 設定)
+│   ├── wsl.sh               # linux.sh への互換ラッパー
 │   ├── install-tools-macos.sh # macos.sh への互換ラッパー
 │   ├── git-wt-herdr-hook.sh # git-wt の herdr 連携 hook (作成/削除時に herdr tab 操作)
 │   ├── git-wt-tmux-hook.sh  # git-wt の tmux 連携 hook (herdr 外のとき herdr hook から委譲される)
@@ -67,6 +70,12 @@ dotfiles/
 ./script/bootstrap.sh
 ```
 
+### Ubuntu (ネイティブ)
+
+- `linux.sh` はデスクトップ有無を `/usr/share/{wayland-sessions,xsessions}` で判定し、GUI 向け処理 (wl-clipboard/xclip、Ghostty/Zed/Terminator 設定、GNOME 入力切替 Ctrl+Space) を分岐する。アプリ本体 (Ghostty 等) は snap 等で別途導入
+- Ghostty/GNOME Terminal はログインシェルを起動しないため、herdr-auto-attach は Linux では `SHLVL=1` のシェルも対象にする
+- Neovim の IME 切替は ibus (`xkb:us::eng`) を使う。Karabiner の Ctrl+T で IME オフは macOS 専用
+
 ### WSL2
 
 - Windows 側の WezTerm 設定は dotfiles 管理外。WSL 内の zsh/tmux/nvim/mise 等だけを管理する。
@@ -81,6 +90,7 @@ dotfiles/
 - **sheldon**: プラグイン変更後は `sheldon lock` が必要
 - **mise**: ツール追加/変更後は `mise install` で反映
 - **zshrc_local**: マシン固有設定（gitignore対象）。シェルデバッグ時は `.zshrc` から読み込まれることに注意
+- **ghq**: 本体は mise、root (`~/src`) は `gitconfig` の `[ghq] root` で管理。bootstrap は root の作成と `ghq root` の一致確認だけ行う
 - **gitconfig**: `~/.gitconfig` へ symlink されるので `git config --global` で直接書き換えず、このファイルを編集する。`$HOME` の展開が必要な設定 (git-wt の hook パス等) だけは bootstrap が `~/.gitconfig_local` へ書き出し、`gitconfig` 末尾の include で後勝ちさせる
 
 ## 主要ツールと設定のポイント

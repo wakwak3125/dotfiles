@@ -326,19 +326,15 @@ function fgg() {
 autoload -Uz yolo
 compdef yolo=claude
 
-# Docker CLI completions (パスが存在する場合のみ)
-if [[ -d "$HOME/.docker/completions" ]]; then
-  fpath=($HOME/.docker/completions $fpath)
-  autoload -Uz compinit
-  compinit
-fi
-
 # henry-preview CLI completion (インストール済みの場合のみ)
 if command -v henry-preview >/dev/null 2>&1; then
   source <(henry-preview completion zsh)
 fi
 # The following lines have been added by Docker Desktop to enable Docker CLI completions.
-fpath=(/Users/wakwak/.docker/completions $fpath)
-autoload -Uz compinit
-compinit
+# (マーカーは Docker Desktop の再追記防止のため残す。パスは OS 非依存にしている)
+if [[ -d "$HOME/.docker/completions" ]]; then
+  fpath=($HOME/.docker/completions $fpath)
+  autoload -Uz compinit
+  compinit
+fi
 # End of Docker CLI completions
