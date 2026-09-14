@@ -1,0 +1,6 @@
+# stream: NDI 受信 + OBS/NVENC 配信時。CPU 上限は BIOS 側 PPT に委ねる
+CPU_EPP=balance_performance
+CPU_MAX_FREQ_KHZ=max
+# NVENC は GPU core をフルに使わないため実測しながら下げる余地あり (目安 120〜170W)
+GPU_POWER_LIMIT_W=150
+FAN_PROFILE=stream

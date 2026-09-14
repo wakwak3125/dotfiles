@@ -1,0 +1,94 @@
+#!/usr/bin/env bash
+# server-profile: 自宅サーバーの動作プロファイル (eco / stream / performance) を切り替える
+#
+# 変更対象:
+#   CPU: amd-pstate-epp の energy_performance_preference と scaling_max_freq
+#        (ryzenadj は Vermeer 非対応のため PPT 自体は BIOS 側で固定し、OS からは周波数と EPP で抑える)
+#   GPU: nvidia-smi の Power Limit
+#   fan: /etc/server-profiles/fan-hook があれば FAN_PROFILE を引数に呼び出す
+#
+# 使い方:
+#   server-profile <eco|stream|performance>   プロファイルを適用する (root 必須)
+#   server-profile status                      現在の適用状況を表示する
+#   server-profile list                        利用可能なプロファイルを表示する
+set -euo pipefail
+
+PROFILE_DIR=/etc/server-profiles
+STATE_DIR=/run/server-profile
+CPUFREQ_GLOB='/sys/devices/system/cpu/cpu[0-9]*/cpufreq'
+
+log() { echo "server-profile: $*" >&2; }
+die() { log "error: $*"; exit 1; }
+
+list_profiles() {
+  find "$PROFILE_DIR" -maxdepth 1 -type f ! -name 'fan-hook' -printf '%f\n' | sort
+}
+
+apply_cpu() {
+  local epp=$1 max_khz=$2 hw_max
+  hw_max=$(cat /sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_max_freq)
+  [ "$max_khz" = max ] && max_khz=$hw_max
+  for d in $CPUFREQ_GLOB; do
+    # EPP を先に戻してから周波数上限を変えないと、上限 > 現在値 のとき書き込みを拒否されることがある
+    echo "$epp" > "$d/energy_performance_preference"
+    echo "$max_khz" > "$d/scaling_max_freq"
+  done
+  log "cpu: epp=$epp max_freq=$((max_khz / 1000))MHz"
+}
+
+apply_gpu() {
+  local watts=$1
+  command -v nvidia-smi >/dev/null || { log "gpu: nvidia-smi がないためスキップ"; return; }
+  if [ "$watts" = default ]; then
+    watts=$(nvidia-smi -q -d POWER | awk -F: '/Default Power Limit/ {gsub(/[ W]/, "", $2); print $2; exit}')
+  fi
+  # persistence mode がないと nvidia-smi のたびにドライバが初期化され設定が揮発する
+  nvidia-smi -pm 1 >/dev/null
+  nvidia-smi -pl "$watts" >/dev/null
+  log "gpu: power_limit=${watts}W"
+}
+
+apply_fan() {
+  local profile=$1
+  if [ -x "$PROFILE_DIR/fan-hook" ]; then
+    "$PROFILE_DIR/fan-hook" "$profile" || log "fan: hook が失敗 (冷却は BIOS Q-Fan にフォールバック)"
+  else
+    log "fan: hook 未設定のためスキップ"
+  fi
+}
+
+apply() {
+  local name=$1 file=$PROFILE_DIR/$1
+  [ -f "$file" ] || die "プロファイルがありません: $name ($(list_profiles | tr '\n' ' '))"
+  [ "$(id -u)" = 0 ] || die "root で実行してください"
+  # shellcheck disable=SC1090
+  source "$file"
+  : "${CPU_EPP:?}" "${CPU_MAX_FREQ_KHZ:?}" "${GPU_POWER_LIMIT_W:?}" "${FAN_PROFILE:?}"
+  apply_cpu "$CPU_EPP" "$CPU_MAX_FREQ_KHZ"
+  apply_gpu "$GPU_POWER_LIMIT_W"
+  apply_fan "$FAN_PROFILE"
+  mkdir -p "$STATE_DIR"
+  echo "$name" > "$STATE_DIR/current"
+  log "applied: $name"
+}
+
+status() {
+  local d=/sys/devices/system/cpu/cpu0/cpufreq
+  echo "profile:      $(cat "$STATE_DIR/current" 2>/dev/null || echo '(未適用)')"
+  echo "cpu epp:      $(cat "$d/energy_performance_preference")"
+  echo "cpu max_freq: $(( $(cat "$d/scaling_max_freq") / 1000 )) MHz"
+  if command -v nvidia-smi >/dev/null; then
+    nvidia-smi --query-gpu=power.limit,power.draw,temperature.gpu --format=csv,noheader \
+      | awk -F', ' '{printf "gpu:          limit=%s draw=%s temp=%s°C\n", $1, $2, $3}'
+  fi
+  for h in /sys/class/hwmon/hwmon*; do
+    [ "$(cat "$h/name")" = k10temp ] && echo "cpu temp:     $(( $(cat "$h/temp1_input") / 1000 ))°C"
+  done
+}
+
+case "${1:-}" in
+  status) status ;;
+  list) list_profiles ;;
+  ""|-h|--help) sed -n '2,15p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+  *) apply "$1" ;;
+esac

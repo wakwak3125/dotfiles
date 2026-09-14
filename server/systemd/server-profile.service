@@ -1,0 +1,13 @@
+[Unit]
+Description=Apply default server power profile (eco)
+# GPU の Power Limit は NVIDIA ドライバ初期化後でないと設定できない
+After=nvidia-persistenced.service systemd-modules-load.service
+Wants=nvidia-persistenced.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/sbin/server-profile eco
+
+[Install]
+WantedBy=multi-user.target

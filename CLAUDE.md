@@ -37,10 +37,12 @@ dotfiles/
 │   ├── tmux/tmux.conf       # tmux 設定 (併存期間中のみ。herdr へ移行中)
 │   └── zed/settings.json    # Zed エディタ設定 (macOS / Ubuntu デスクトップ)
 ├── docs/             # 設計・移行メモ (herdr-migration.md 等)
+├── local/            # ローカル専用の設計メモ・作業ログ置き場 (gitignore 対象。IP 等の非公開情報はここに書く)
 ├── gitconfig         # Git グローバル設定 (-> ~/.gitconfig; 末尾で ~/.gitconfig_local を include)
 ├── nvim/init.lua     # Neovim 設定 (lazy.nvim)
 ├── pbcopy            # pbcopy polyfill (Linux/WSL)
 ├── pbpaste           # pbpaste polyfill (Linux/WSL)
+├── server/           # 自宅サーバー用 (server-profile: eco/stream/performance 切替 CLI + systemd unit。install.sh で /usr/local/sbin 等へコピー)
 ├── script/           # インストール・ユーティリティスクリプト
 │   ├── bootstrap.sh  # 初期セットアップ (symlink 作成、gh skill install 含む)
 │   ├── claude-status # Claude Code ダッシュボード
