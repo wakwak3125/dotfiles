@@ -2,7 +2,7 @@
 
 # Neovimのインストールスクリプト（冪等）
 # Usage: ./install-neovim.sh
-# Supports: macOS (x86_64, arm64) and Linux (x86_64)
+# Supports: macOS (x86_64, arm64) and Linux (x86_64, arm64)
 
 set -e
 
@@ -19,8 +19,13 @@ if [ "$OS" == "Darwin" ]; then
     NVIM_DIR="nvim-macos-x86_64"
   fi
 else
-  NVIM_PACKAGE="nvim-linux-x86_64.tar.gz"
-  NVIM_DIR="nvim-linux-x86_64"
+  if [ "$ARCH" == "aarch64" ] || [ "$ARCH" == "arm64" ]; then
+    NVIM_PACKAGE="nvim-linux-arm64.tar.gz"
+    NVIM_DIR="nvim-linux-arm64"
+  else
+    NVIM_PACKAGE="nvim-linux-x86_64.tar.gz"
+    NVIM_DIR="nvim-linux-x86_64"
+  fi
 fi
 
 NVIM_BIN_PATH="/opt/$NVIM_DIR/bin"
@@ -78,6 +83,6 @@ else
   sudo update-alternatives --set vi $NVIM_PATH
 fi
 
-git config --global core.editor "nvim"
+# core.editor はリポジトリの gitconfig (~/.gitconfig の symlink 先) で設定済み
 
 echo "Installed at: $NVIM_PATH"

@@ -23,7 +23,9 @@ herdr-auto-attach() {
   fi
 
   # ログインシェルでない場合はスキップ
-  if [[ ! "$-" == *l* ]]; then
+  # ただし Linux の Ghostty / GNOME Terminal 等はログインシェルを起動しないため、
+  # 端末直下のシェル (SHLVL=1) も対象にする
+  if [[ ! "$-" == *l* ]] && ! [[ "$OSTYPE" == linux* && "${SHLVL:-1}" -le 1 ]]; then
     return 0
   fi
 
