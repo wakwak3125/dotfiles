@@ -248,18 +248,22 @@ merge_claude_settings() {
   claude_settings_tmp="$(mktemp)"
   # WorktreeCreate フック、textlint フック、ccstatusline (mise shim 経由) のステータスラインをマージ。
   # PostToolUse / PreToolUse には外部ツールのフックも並び、/hooks で同じ matcher のグループに相乗りすることもある。
-  # グループごと消さず、claude-hook.mjs を含む hook だけを除いてから追加し直す (コマンドを変えても古いエントリが残らない)。
+  # グループごと消さず、claude-hook.mjs の hook だけを全イベントから除いてから追加し直す。
+  # モードやイベント単位で差し替えると、モードの改名や廃止で古いエントリが残るため。
   # プロジェクトの mise 設定で古い node が選ばれないよう、node は textlint のディレクトリで起動する
   local textlint_hook='cd $HOME/.config/textlint && $HOME/.local/share/mise/shims/node claude-hook.mjs'
-  jq --arg md "$textlint_hook markdown" --arg pr "$textlint_hook pr" '
-      def upsert($event; $matcher; $cmd):
-        .hooks[$event] = ((.hooks[$event] // [])
-            | map(.hooks |= ((. // []) | map(select((.command // "") | contains("claude-hook.mjs") | not))))
-            | map(select(.hooks | length > 0)))
-          + [{"matcher": $matcher, "hooks": [{"type": "command", "command": $cmd, "timeout": 30}]}];
-      .hooks.WorktreeCreate = [{"hooks":[{"type":"command","command":"$HOME/.claude/hooks/worktree-create.sh"}]}]
-      | upsert("PostToolUse"; "Write|Edit|MultiEdit"; $md)
-      | upsert("PreToolUse"; "Bash"; $pr)
+  # 読み取り系の MCP ツールで node を起動しないよう、書き込み系のツールだけに絞る (claude-hook.mjs の MCP_TARGETS と揃える)
+  local mcp_matcher='mcp__claude_ai_Linear__save_(issue|document|comment)|mcp__claude_ai_Notion__notion-(create-pages|update-page|create-comment)'
+  jq --arg hook "$textlint_hook" --arg mcp_matcher "$mcp_matcher" '
+      def ours: (.command // "") | contains("claude-hook.mjs");
+      def without_ours: map(.hooks |= ((. // []) | map(select(ours | not)))) | map(select(.hooks | length > 0));
+      def add($event; $matcher; $mode):
+        .hooks[$event] += [{"matcher": $matcher, "hooks": [{"type": "command", "command": "\($hook) \($mode)", "timeout": 30}]}];
+      .hooks = ((.hooks // {}) | map_values(if type == "array" then without_ours else . end))
+      | .hooks.WorktreeCreate = [{"hooks":[{"type":"command","command":"$HOME/.claude/hooks/worktree-create.sh"}]}]
+      | add("PostToolUse"; "Write|Edit|MultiEdit"; "markdown")
+      | add("PreToolUse"; "Bash"; "pr")
+      | add("PreToolUse"; $mcp_matcher; "mcp")
       | .statusLine = {"type":"command","command":"$HOME/.local/share/mise/shims/ccstatusline","padding":0}' \
     "$claude_settings" > "$claude_settings_tmp"
   mv "$claude_settings_tmp" "$claude_settings"

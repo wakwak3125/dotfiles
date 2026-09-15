@@ -92,7 +92,7 @@ dotfiles/
 - **agent docs**: `agents/claude/{global,org}` (CLAUDE.md) と `agents/codex/{global,org}` (AGENTS.md) は同一内容を保つ (エージェント固有指示が必要なときだけ分岐)。global は追跡、org は gitignore 対象。bootstrap で symlink される
 - **sheldon**: プラグイン変更後は `sheldon lock` が必要
 - **mise**: ツール追加/変更後は `mise install` で反映
-- **textlint**: `config/textlint/` の依存は bootstrap が `npm ci` で入れる (ルールを追加したら package-lock.json も更新する)。Claude Code が書いた `.md` (作業ディレクトリ内の変更箇所のみ) と `gh pr create/edit` のタイトル・本文を hook で確認する。PR の hook は指摘があると実行を止めるので、誤検知のときは `<!-- textlint-disable -->` かコマンドに `TEXTLINT_SKIP=1` を付ける
+- **textlint**: `config/textlint/` の依存は bootstrap が `npm ci` で入れる (ルールを追加したら package-lock.json も更新する)。Claude Code が書いた `.md` (作業ディレクトリ内の変更箇所のみ)、`gh pr create/edit` のタイトル・本文、Linear / Notion の MCP ツールで送信する文書を hook で確認する。PR と MCP の hook は指摘があると実行を止める。誤検知のとき、PR は `<!-- textlint-disable -->` かコマンドに `TEXTLINT_SKIP=1` を付け、MCP は同じ内容のまま再実行すれば一度だけ通る
 - **zshrc_local**: マシン固有設定（gitignore対象）。シェルデバッグ時は `.zshrc` から読み込まれることに注意
 - **ghq**: 本体は mise、root (`~/src`) は `gitconfig` の `[ghq] root` で管理。bootstrap は root の作成と `ghq root` の一致確認だけ行う
 - **gitconfig**: `~/.gitconfig` へ symlink されるので `git config --global` で直接書き換えず、このファイルを編集する。`$HOME` の展開が必要な設定 (git-wt の hook パス等) だけは bootstrap が `~/.gitconfig_local` へ書き出し、`gitconfig` 末尾の include で後勝ちさせる
