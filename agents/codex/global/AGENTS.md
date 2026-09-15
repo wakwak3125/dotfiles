@@ -44,6 +44,10 @@ CLAUDE.md (Claude Code) と AGENTS.md (Codex) は同一内容を保つこと。�
 - **PR 作成**: `gh pr create` を使用
 - push する際、origin のベースブランチと比較し、rebase が必要な場合は必ず rebase の上 push すること
 
+## PR作成
+
+PR のタイトルと本文は pr-writing skill に従って書く。
+
 ## org 固有設定
 
 組織・会社固有の設定は `~/src/github.com/<org>/CLAUDE.md` および `AGENTS.md` に置く (dotfiles の `agents/claude/org/<org>/CLAUDE.md` / `agents/codex/org/<org>/AGENTS.md` から symlink、gitignore 対象)。その org 配下のリポジトリ・worktree で作業するときだけ読み込まれる。

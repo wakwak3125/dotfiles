@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Claude Code hook から textlint を実行する。
 //   markdown: PostToolUse (Write|Edit|MultiEdit)。書き込んだ Markdown の変更箇所だけを確認する
-//   pr:       PreToolUse (Bash)。gh pr create / edit のタイトルと本文を確認し、指摘があれば実行を止める
+//   pr:       PreToolUse (Bash)。gh pr create / edit のタイトルと本文を textlint と pr-writing skill の規範で確認し、指摘があれば実行を止める
 //   mcp:      PreToolUse (Linear / Notion の書き込み系 MCP ツール)。送信する文書を確認し、指摘があれば実行を止める
 // ルールをこのディレクトリの node_modules から解決させるため、スクリプトもここに置く。
 // hook の不具合で作業を止めないよう、解析や lint に失敗したときは常に exit 0 で通す。
@@ -182,6 +182,52 @@ async function extractPr(command, args, cwd) {
   return parts;
 }
 
+// pr-writing skill の規範のうち、文面の意味を読まずに判定できるものだけを確認する
+const PR_TITLE_MAX = 60;
+const PR_BODY_MAX_LINES = 10;
+const PR_TICKET_AT_HEAD = /^(?:\w+(?:\([^)]*\))?!?:\s*)?\[?[A-Z][A-Z0-9]+-\d+\b/;
+const PR_BANNED_PHRASES = [
+  /と考えられます/,
+  /が期待されます/,
+  /かと思います/,
+  /いたしました/,
+  /ご確認のほど/,
+  /本\s*PR\s*では/,
+  /以上が変更内容/,
+  /まとめると/,
+  /既存機能への影響はありません/,
+  /^\s*(?:[-*]\s*)?(?:N\/A|特になし)\s*$/m,
+];
+
+function prNormLines(title, body) {
+  const lines = [];
+  if (title) {
+    const length = [...title].length;
+    if (length > PR_TITLE_MAX) lines.push(`- title: ${length} 字あり、上限の ${PR_TITLE_MAX} 字を超えている (pr-writing)`);
+    if (PR_TICKET_AT_HEAD.test(title)) lines.push("- title: チケット番号は先頭ではなく末尾か本文に置く (pr-writing)");
+  }
+  if (body) {
+    // 見出し、空行、Claude Code の attribution とセッション URL は分量に数えない
+    const counted = body
+      .split("\n")
+      .filter(
+        (l) =>
+          l.trim() &&
+          !/^#{1,6}\s/.test(l) &&
+          !l.includes("Generated with [Claude Code]") &&
+          !/^https:\/\/claude\.ai\/code\/session_\S+$/.test(l.trim()),
+      );
+    if (counted.length > PR_BODY_MAX_LINES) {
+      lines.push(`- body: 本文が ${counted.length} 行あり、上限の ${PR_BODY_MAX_LINES} 行を超えている (pr-writing)`);
+    }
+    for (const phrase of PR_BANNED_PHRASES) {
+      const found = phrase.exec(body);
+      if (found) lines.push(`- body: 「${found[0].trim()}」は情報を増やさないので使わない (pr-writing)`);
+    }
+  }
+  return lines;
+}
+
 async function lintPr(input) {
   const command = input.tool_input?.command;
   if (!command || SKIP_MARKER.test(command)) return;
@@ -189,13 +235,17 @@ async function lintPr(input) {
   if (!gh) return;
 
   const { title, body } = await extractPr(command, command.slice(gh.index), input.cwd ?? process.cwd());
-  const lines = await lintTargets([
-    { label: "title", text: title, fragment: true },
-    { label: "body", text: body },
-  ]);
+  const lines = [
+    ...prNormLines(title, body),
+    ...(await lintTargets([
+      { label: "title", text: title, fragment: true },
+      { label: "body", text: body },
+    ])),
+  ];
   if (lines.length === 0) return;
   report(
     `textlint: PR のタイトルと本文に ${lines.length} 件の指摘があるため gh の実行を止めました。修正して再実行してください。` +
+      "規範の指摘 (pr-writing) は pr-writing skill を読んで直してください。" +
       "誤検知なら本文の該当箇所を <!-- textlint-disable rule名 --> と <!-- textlint-enable --> で囲むか、" +
       "コマンドに TEXTLINT_SKIP=1 を付けて再実行してください。",
     lines,

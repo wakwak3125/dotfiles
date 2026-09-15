@@ -21,6 +21,7 @@ dotfiles/
 │   │   ├── manifest.tsv # skill ごとの install 先 agent 定義
 │   │   └── external.tsv # 外部 repo 由来の skill (skills.sh = `npx skills add` で導入)
 │   ├── agents/       # Claude Code subagent 定義 (spec-planner-*, japan-{ehr,receipt}-* 等)
+│   ├── plugins/      # Claude Code plugin (textlint: 日本語の lint hook)。直下の .claude-plugin/marketplace.json で登録
 │   └── hooks/        # 個人 hooks (worktree-create.sh 等) ※ファイル単位で symlink
 ├── config/           # XDG_CONFIG_HOME 配下の設定
 │   ├── git/ignore    # グローバル gitignore
@@ -30,7 +31,6 @@ dotfiles/
 │   ├── karabiner/    # Karabiner-Elements 設定 (macOS)
 │   ├── mise/config.toml    # ランタイム管理 (Go, Java, Node, Rust, CLI tools)
 │   ├── sheldon/plugins.toml # zsh プラグイン管理
-│   ├── textlint/     # Claude Code の textlint hook (claude-hook.mjs、ルール設定、prh 辞書)
 │   ├── starship.toml        # プロンプトテーマ
 │   ├── ghostty/config       # Ghostty 設定 (macOS / Ubuntu デスクトップ)
 │   ├── terminator/   # Terminator 設定 (Ubuntu デスクトップ)
@@ -91,7 +91,7 @@ dotfiles/
 - **agent docs**: `agents/claude/{global,org}` (CLAUDE.md) と `agents/codex/{global,org}` (AGENTS.md) は同一内容を保つ (エージェント固有指示が必要なときだけ分岐)。global は追跡、org は gitignore 対象。bootstrap で symlink される
 - **sheldon**: プラグイン変更後は `sheldon lock` が必要
 - **mise**: ツール追加/変更後は `mise install` で反映
-- **textlint**: `config/textlint/` の依存は bootstrap が `npm ci` で入れる (ルールを追加したら package-lock.json も更新する)。Claude Code が書いた `.md` (作業ディレクトリ内の変更箇所のみ)、`gh pr create/edit` のタイトル・本文、Linear / Notion の MCP ツールで送信する文書を hook で確認する。PR と MCP の hook は指摘があると実行を止める。誤検知のとき、PR は `<!-- textlint-disable -->` かコマンドに `TEXTLINT_SKIP=1` を付け、MCP は同じ内容のまま再実行すれば一度だけ通る
+- **textlint**: `agents/plugins/textlint/` の plugin。bootstrap が marketplace を登録して有効にし、依存は Claude Code が package-lock.json から入れる (ルールを追加したら lockfile も更新し、plugin.json の version を上げる)。Claude Code が書いた `.md` (作業ディレクトリ内の変更箇所のみ)、`gh pr create/edit` のタイトル・本文、Linear / Notion の MCP ツールで送信する文書を hook で確認する。PR と MCP の hook は指摘があると実行を止める。誤検知のとき、PR は `<!-- textlint-disable -->` かコマンドに `TEXTLINT_SKIP=1` を付け、MCP は同じ内容のまま再実行すれば一度だけ通る
 - **zshrc_local**: マシン固有設定（gitignore対象）。シェルデバッグ時は `.zshrc` から読み込まれることに注意
 - **ghq**: 本体は mise、root (`~/src`) は `gitconfig` の `[ghq] root` で管理。bootstrap は root の作成と `ghq root` の一致確認だけ行う
 - **gitconfig**: `~/.gitconfig` へ symlink されるので `git config --global` で直接書き換えず、このファイルを編集する。`$HOME` の展開が必要な設定 (git-wt の hook パス等) だけは bootstrap が `~/.gitconfig_local` へ書き出し、`gitconfig` 末尾の include で後勝ちさせる

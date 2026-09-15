@@ -1,0 +1,8 @@
+{
+  "name": "textlint",
+  "version": "0.1.0",
+  "description": "Claude Code が書く Markdown、PR のタイトルと本文、Linear と Notion に送る文書の日本語を textlint で確認する hook",
+  "author": {
+    "name": "wakwak3125"
+  }
+}

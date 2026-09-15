@@ -135,7 +135,6 @@ link_common_config() {
   link_file "$ROOT/config/hunk/config.toml" "$HOME/.config/hunk/config.toml"
   link_file "$ROOT/config/starship.toml" "$HOME/.config/starship.toml"
   link_file "$ROOT/config/ccstatusline/settings.json" "$HOME/.config/ccstatusline/settings.json"
-  link_dir "$ROOT/config/textlint" "$HOME/.config/textlint"
   link_file "$ROOT/config/git/ignore" "$HOME/.config/git/ignore"
 }
 
@@ -220,10 +219,10 @@ merge_claude_settings() {
   local claude_settings="$HOME/.claude/settings.json"
   local claude_settings_tmp
 
-  # Claude Code settings.json に WorktreeCreate / textlint フック設定をマージ
+  # Claude Code settings.json に WorktreeCreate フック設定と dotfiles の plugin をマージ
   # settings.json は API キー等の機密混在のため symlink せず、jq でこのキーだけ書き換える
   if ! command -v jq &>/dev/null; then
-    echo "==> WARN: jq not found, skipping settings.json merge. Install jq and re-run, or add the WorktreeCreate / textlint hooks manually." >&2
+    echo "==> WARN: jq not found, skipping settings.json merge. Install jq and re-run, or add the WorktreeCreate hook and dotfiles marketplace manually." >&2
     return 0
   fi
 
@@ -232,28 +231,21 @@ merge_claude_settings() {
     echo "$claude_settings was created"
   fi
   claude_settings_tmp="$(mktemp)"
-  # WorktreeCreate フック、textlint フック、ccstatusline (mise shim 経由) のステータスラインをマージ。
-  # PostToolUse / PreToolUse には外部ツールのフックも並び、/hooks で同じ matcher のグループに相乗りすることもある。
-  # グループごと消さず、claude-hook.mjs の hook だけを全イベントから除いてから追加し直す。
-  # モードやイベント単位で差し替えると、モードの改名や廃止で古いエントリが残るため。
-  # プロジェクトの mise 設定で古い node が選ばれないよう、node は textlint のディレクトリで起動する
-  local textlint_hook='cd $HOME/.config/textlint && $HOME/.local/share/mise/shims/node claude-hook.mjs'
-  # 読み取り系の MCP ツールで node を起動しないよう、書き込み系のツールだけに絞る (claude-hook.mjs の MCP_TARGETS と揃える)
-  local mcp_matcher='mcp__claude_ai_Linear__save_(issue|document|comment)|mcp__claude_ai_Notion__notion-(create-pages|update-page|create-comment)'
-  jq --arg hook "$textlint_hook" --arg mcp_matcher "$mcp_matcher" '
+  # WorktreeCreate フック、ccstatusline (mise shim 経由) のステータスライン、dotfiles の plugin をマージ。
+  # textlint の hook は plugin (agents/plugins/textlint) に移した。marketplace を登録して有効にしておけば、
+  # Claude Code がセッション開始時に plugin をキャッシュへ入れ、package-lock.json から依存も入れる。
+  # 以前 settings.json に直接書いていた claude-hook.mjs の hook は、plugin と二重に動かないよう取り除く
+  jq --arg root "$ROOT" '
       def ours: (.command // "") | contains("claude-hook.mjs");
       def without_ours: map(.hooks |= ((. // []) | map(select(ours | not)))) | map(select(.hooks | length > 0));
-      def add($event; $matcher; $mode):
-        .hooks[$event] += [{"matcher": $matcher, "hooks": [{"type": "command", "command": "\($hook) \($mode)", "timeout": 30}]}];
       .hooks = ((.hooks // {}) | map_values(if type == "array" then without_ours else . end))
       | .hooks.WorktreeCreate = [{"hooks":[{"type":"command","command":"$HOME/.claude/hooks/worktree-create.sh"}]}]
-      | add("PostToolUse"; "Write|Edit|MultiEdit"; "markdown")
-      | add("PreToolUse"; "Bash"; "pr")
-      | add("PreToolUse"; $mcp_matcher; "mcp")
+      | .extraKnownMarketplaces.dotfiles = {"source": {"source": "directory", "path": $root}}
+      | .enabledPlugins["textlint@dotfiles"] = true
       | .statusLine = {"type":"command","command":"$HOME/.local/share/mise/shims/ccstatusline","padding":0}' \
     "$claude_settings" > "$claude_settings_tmp"
   mv "$claude_settings_tmp" "$claude_settings"
-  echo "==> Merged WorktreeCreate hook, textlint hooks and ccstatusline statusLine into $claude_settings"
+  echo "==> Merged WorktreeCreate hook, dotfiles plugins and ccstatusline statusLine into $claude_settings"
 }
 
 install_agent_skills() {
@@ -306,16 +298,6 @@ setup_ghq() {
     return 0
   fi
   echo "==> ghq root: $actual"
-}
-
-install_textlint() {
-  # Claude Code の textlint フックが使う依存。npm の global や mise の npm backend では
-  # パッケージごとに置き場所が分かれ、textlint からルールを解決できないため専用ディレクトリに入れる
-  if ! command -v npm &>/dev/null; then
-    echo "==> WARN: npm not found, skipping textlint install (run mise install and re-run)" >&2
-    return 0
-  fi
-  npm ci --prefix "$ROOT/config/textlint" --no-audit --no-fund
 }
 
 cleanup_legacy_wt() {
@@ -396,9 +378,6 @@ run_step "Agent skill install" install_agent_skills
 
 # hunk 同梱 skill の登録 (mise で hunk が入った後に実行する)
 run_step "hunk skill link" link_hunk_skill
-
-# textlint フックの依存 (mise で node が入った後に実行する)
-run_step "textlint install" install_textlint
 
 # 旧 wt (自前 Go 製) は git-wt へ移行済み。残存バイナリがあれば削除する
 run_step "Legacy wt cleanup" cleanup_legacy_wt
