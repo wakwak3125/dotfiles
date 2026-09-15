@@ -82,7 +82,10 @@ status() {
       | awk -F', ' '{printf "gpu:          limit=%s draw=%s temp=%s°C\n", $1, $2, $3}'
   fi
   for h in /sys/class/hwmon/hwmon*; do
-    [ "$(cat "$h/name")" = k10temp ] && echo "cpu temp:     $(( $(cat "$h/temp1_input") / 1000 ))°C"
+    # `[ ] && echo` だと最後の hwmon が k10temp 以外のとき偽で終わり、set -e で exit 1 になる
+    if [ "$(cat "$h/name")" = k10temp ]; then
+      echo "cpu temp:     $(( $(cat "$h/temp1_input") / 1000 ))°C"
+    fi
   done
 }
 

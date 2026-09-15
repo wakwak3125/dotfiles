@@ -4,7 +4,8 @@ CPU_EPP=power
 # CPU の最大クロック (kHz)。boost 電圧域を切ることで PPT を大きく下げる。max で上限なし
 # 実測 (stress-ng 全コア, turbostat PkgWatt): 3.8GHz=77W / 3.5GHz=68W / 3.2GHz=65W。3.5GHz 以下は効果が薄い
 CPU_MAX_FREQ_KHZ=3500000
-# GPU の Power Limit (W)。RTX 2070 SUPER の下限は 125W (nvidia-smi -q -d POWER)
-GPU_POWER_LIMIT_W=125
+# GPU の Power Limit (W)。上限値なのでアイドル時の消費電力 (P8) には影響しない。
+# 下限 125W では負荷時に SW Power Cap に張り付くため、ワットあたり性能が落ちにくい 165W にする (既定 215W)
+GPU_POWER_LIMIT_W=165
 # fan hook (/etc/server-profiles/fan-hook) に渡すプロファイル名
 FAN_PROFILE=eco
