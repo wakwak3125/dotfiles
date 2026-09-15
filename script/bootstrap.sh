@@ -138,20 +138,6 @@ link_common_config() {
   link_file "$ROOT/config/git/ignore" "$HOME/.config/git/ignore"
 }
 
-render_codex_profiles() {
-  # Codex profile は skill の絶対パスを要するため symlink せず、${HOME} を展開して書き出す
-  local src dest
-  ensure_dir "$HOME/.codex"
-  for src in "$ROOT"/config/codex/*.config.toml; do
-    [[ -f "$src" ]] || continue
-    dest="$HOME/.codex/$(basename "$src")"
-    # 旧来の symlink 越しに書き込むとリポジトリ側を上書きしてしまうので先に消す
-    rm -f "$dest"
-    sed "s|\${HOME}|$HOME|g" "$src" > "$dest"
-    echo "$dest was rendered"
-  done
-}
-
 link_linux_clipboard_tools() {
   [[ "$OS" != "Darwin" ]] || return 0
 
@@ -233,10 +219,10 @@ merge_claude_settings() {
   local claude_settings="$HOME/.claude/settings.json"
   local claude_settings_tmp
 
-  # Claude Code settings.json に WorktreeCreate フック設定をマージ
+  # Claude Code settings.json に WorktreeCreate フック設定と dotfiles の plugin をマージ
   # settings.json は API キー等の機密混在のため symlink せず、jq でこのキーだけ書き換える
   if ! command -v jq &>/dev/null; then
-    echo "==> WARN: jq not found, skipping settings.json merge. Install jq and re-run, or add the WorktreeCreate hook manually." >&2
+    echo "==> WARN: jq not found, skipping settings.json merge. Install jq and re-run, or add the WorktreeCreate hook and dotfiles marketplace manually." >&2
     return 0
   fi
 
@@ -245,12 +231,21 @@ merge_claude_settings() {
     echo "$claude_settings was created"
   fi
   claude_settings_tmp="$(mktemp)"
-  # WorktreeCreate フックと ccstatusline (mise shim 経由) のステータスラインをマージ
-  jq '.hooks.WorktreeCreate = [{"hooks":[{"type":"command","command":"$HOME/.claude/hooks/worktree-create.sh"}]}]
+  # WorktreeCreate フック、ccstatusline (mise shim 経由) のステータスライン、dotfiles の plugin をマージ。
+  # textlint の hook は plugin (agents/plugins/textlint) に移した。marketplace を登録して有効にしておけば、
+  # Claude Code がセッション開始時に plugin をキャッシュへ入れ、package-lock.json から依存も入れる。
+  # 以前 settings.json に直接書いていた claude-hook.mjs の hook は、plugin と二重に動かないよう取り除く
+  jq --arg root "$ROOT" '
+      def ours: (.command // "") | contains("claude-hook.mjs");
+      def without_ours: map(.hooks |= ((. // []) | map(select(ours | not)))) | map(select(.hooks | length > 0));
+      .hooks = ((.hooks // {}) | map_values(if type == "array" then without_ours else . end))
+      | .hooks.WorktreeCreate = [{"hooks":[{"type":"command","command":"$HOME/.claude/hooks/worktree-create.sh"}]}]
+      | .extraKnownMarketplaces.dotfiles = {"source": {"source": "directory", "path": $root}}
+      | .enabledPlugins["textlint@dotfiles"] = true
       | .statusLine = {"type":"command","command":"$HOME/.local/share/mise/shims/ccstatusline","padding":0}' \
     "$claude_settings" > "$claude_settings_tmp"
   mv "$claude_settings_tmp" "$claude_settings"
-  echo "==> Merged WorktreeCreate hook and ccstatusline statusLine into $claude_settings"
+  echo "==> Merged WorktreeCreate hook, dotfiles plugins and ccstatusline statusLine into $claude_settings"
 }
 
 install_agent_skills() {
@@ -349,7 +344,6 @@ run_step "Platform setup" run_platform_setup
 # 共通 symlink
 # ================================================
 run_step "Common config symlinks" link_common_config
-run_step "Codex profile render" render_codex_profiles
 
 # Linux/WSL 用 pbcopy/pbpaste polyfill。macOS の /usr/bin/pbcopy は上書きしない。
 run_step "Linux clipboard tools" link_linux_clipboard_tools

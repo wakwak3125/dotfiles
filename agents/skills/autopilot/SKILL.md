@@ -99,7 +99,7 @@ description: >-
 アクション未指定で対象がコード実装タスクの場合、サブエージェントに渡すアクションはこれ:
 
 ```
-1. dev-task スキルで <対象チケット> を実装する
+1. <対象チケット> を実装する
    (Linear からチケット本文・受け入れ条件を取得 → 計画 → 実装 → 型/ビルド/テスト/lint → レビュー → commit)。
 2. dev-workflow:create-pr スキルで PR を作成する (PR タイトルは日本語、Linear チケットとリンク)。
 3. CI を監視: `gh pr checks <PR>` で確認し、失敗は原因特定して修正・push、green になるまで対応。
@@ -163,7 +163,7 @@ description: >-
     "source": "linear",
     "trigger": "assignee = self, state = Todo",
     "keyField": "Linear issue identifier (例: EMRK-123)",
-    "action": "default-implement (dev-task → PR → CI → ready_to_merge)"
+    "action": "default-implement (実装 → PR → CI → ready_to_merge)"
   },
   "startedAt": "2026-06-09T12:00:00Z",
   "updatedAt": "2026-06-09T12:34:00Z",

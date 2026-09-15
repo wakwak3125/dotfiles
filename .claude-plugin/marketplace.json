@@ -1,0 +1,14 @@
+{
+  "name": "dotfiles",
+  "description": "wakwak3125/dotfiles で管理する個人用の Claude Code plugin",
+  "owner": {
+    "name": "wakwak3125"
+  },
+  "plugins": [
+    {
+      "name": "textlint",
+      "source": "./agents/plugins/textlint",
+      "description": "Claude Code が書く Markdown、PR のタイトルと本文、Linear と Notion に送る文書の日本語を textlint で確認する hook"
+    }
+  ]
+}

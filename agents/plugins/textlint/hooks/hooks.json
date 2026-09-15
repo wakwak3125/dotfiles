@@ -1,0 +1,38 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd \"${CLAUDE_PLUGIN_ROOT}\" && PATH=\"$HOME/.local/share/mise/shims:$PATH\" node claude-hook.mjs markdown",
+            "timeout": 30
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd \"${CLAUDE_PLUGIN_ROOT}\" && PATH=\"$HOME/.local/share/mise/shims:$PATH\" node claude-hook.mjs pr",
+            "timeout": 30
+          }
+        ]
+      },
+      {
+        "matcher": "mcp__claude_ai_Linear__save_(issue|document|comment)|mcp__claude_ai_Notion__notion-(create-pages|update-page|create-comment)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd \"${CLAUDE_PLUGIN_ROOT}\" && PATH=\"$HOME/.local/share/mise/shims:$PATH\" node claude-hook.mjs mcp",
+            "timeout": 30
+          }
+        ]
+      }
+    ]
+  }
+}
