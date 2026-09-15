@@ -11,6 +11,7 @@ zsh/zsh
 nvim/nvim
 .worktrees/
 agents/skills/*/node_modules/
+config/textlint/node_modules/
 agents/skills/sentry-cli/
 # org 単位の agent docs (会社固有情報を含むため。global は追跡する)
 agents/claude/org/

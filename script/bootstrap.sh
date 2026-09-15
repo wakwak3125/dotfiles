@@ -135,6 +135,7 @@ link_common_config() {
   link_file "$ROOT/config/hunk/config.toml" "$HOME/.config/hunk/config.toml"
   link_file "$ROOT/config/starship.toml" "$HOME/.config/starship.toml"
   link_file "$ROOT/config/ccstatusline/settings.json" "$HOME/.config/ccstatusline/settings.json"
+  link_dir "$ROOT/config/textlint" "$HOME/.config/textlint"
   link_file "$ROOT/config/git/ignore" "$HOME/.config/git/ignore"
 }
 
@@ -233,10 +234,10 @@ merge_claude_settings() {
   local claude_settings="$HOME/.claude/settings.json"
   local claude_settings_tmp
 
-  # Claude Code settings.json に WorktreeCreate フック設定をマージ
+  # Claude Code settings.json に WorktreeCreate / textlint フック設定をマージ
   # settings.json は API キー等の機密混在のため symlink せず、jq でこのキーだけ書き換える
   if ! command -v jq &>/dev/null; then
-    echo "==> WARN: jq not found, skipping settings.json merge. Install jq and re-run, or add the WorktreeCreate hook manually." >&2
+    echo "==> WARN: jq not found, skipping settings.json merge. Install jq and re-run, or add the WorktreeCreate / textlint hooks manually." >&2
     return 0
   fi
 
@@ -245,12 +246,24 @@ merge_claude_settings() {
     echo "$claude_settings was created"
   fi
   claude_settings_tmp="$(mktemp)"
-  # WorktreeCreate フックと ccstatusline (mise shim 経由) のステータスラインをマージ
-  jq '.hooks.WorktreeCreate = [{"hooks":[{"type":"command","command":"$HOME/.claude/hooks/worktree-create.sh"}]}]
+  # WorktreeCreate フック、textlint フック、ccstatusline (mise shim 経由) のステータスラインをマージ。
+  # PostToolUse / PreToolUse には外部ツールのフックも並び、/hooks で同じ matcher のグループに相乗りすることもある。
+  # グループごと消さず、claude-hook.mjs を含む hook だけを除いてから追加し直す (コマンドを変えても古いエントリが残らない)。
+  # プロジェクトの mise 設定で古い node が選ばれないよう、node は textlint のディレクトリで起動する
+  local textlint_hook='cd $HOME/.config/textlint && $HOME/.local/share/mise/shims/node claude-hook.mjs'
+  jq --arg md "$textlint_hook markdown" --arg pr "$textlint_hook pr" '
+      def upsert($event; $matcher; $cmd):
+        .hooks[$event] = ((.hooks[$event] // [])
+            | map(.hooks |= ((. // []) | map(select((.command // "") | contains("claude-hook.mjs") | not))))
+            | map(select(.hooks | length > 0)))
+          + [{"matcher": $matcher, "hooks": [{"type": "command", "command": $cmd, "timeout": 30}]}];
+      .hooks.WorktreeCreate = [{"hooks":[{"type":"command","command":"$HOME/.claude/hooks/worktree-create.sh"}]}]
+      | upsert("PostToolUse"; "Write|Edit|MultiEdit"; $md)
+      | upsert("PreToolUse"; "Bash"; $pr)
       | .statusLine = {"type":"command","command":"$HOME/.local/share/mise/shims/ccstatusline","padding":0}' \
     "$claude_settings" > "$claude_settings_tmp"
   mv "$claude_settings_tmp" "$claude_settings"
-  echo "==> Merged WorktreeCreate hook and ccstatusline statusLine into $claude_settings"
+  echo "==> Merged WorktreeCreate hook, textlint hooks and ccstatusline statusLine into $claude_settings"
 }
 
 install_agent_skills() {
@@ -303,6 +316,16 @@ setup_ghq() {
     return 0
   fi
   echo "==> ghq root: $actual"
+}
+
+install_textlint() {
+  # Claude Code の textlint フックが使う依存。npm の global や mise の npm backend では
+  # パッケージごとに置き場所が分かれ、textlint からルールを解決できないため専用ディレクトリに入れる
+  if ! command -v npm &>/dev/null; then
+    echo "==> WARN: npm not found, skipping textlint install (run mise install and re-run)" >&2
+    return 0
+  fi
+  npm ci --prefix "$ROOT/config/textlint" --no-audit --no-fund
 }
 
 cleanup_legacy_wt() {
@@ -384,6 +407,9 @@ run_step "Agent skill install" install_agent_skills
 
 # hunk 同梱 skill の登録 (mise で hunk が入った後に実行する)
 run_step "hunk skill link" link_hunk_skill
+
+# textlint フックの依存 (mise で node が入った後に実行する)
+run_step "textlint install" install_textlint
 
 # 旧 wt (自前 Go 製) は git-wt へ移行済み。残存バイナリがあれば削除する
 run_step "Legacy wt cleanup" cleanup_legacy_wt

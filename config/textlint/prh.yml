@@ -1,0 +1,43 @@
+# CLAUDE.md の「定訳のある一般語は日本語で書く」を機械的に確認する辞書。
+# 語幹だけにすると「チェックボックス」「エラーハンドリング」まで拾うため、動詞の活用形に限定する。
+version: 1
+rules:
+  - expected: 取得$1
+    pattern: /フェッチ(し|す|さ|でき)/
+    specs:
+      - from: フェッチする
+        to: 取得する
+  - expected: 検証$1
+    pattern: /バリデート(し|す|さ|でき)/
+    specs:
+      - from: バリデートして
+        to: 検証して
+  - expected: 確認$1
+    pattern: /チェック(し|す|さ|でき)/
+    specs:
+      - from: チェックした
+        to: 確認した
+      - from: チェックシート
+        to: チェックシート
+  - expected: 更新$1
+    pattern: /アップデート(し|す|さ|でき)/
+    specs:
+      - from: アップデートする
+        to: 更新する
+  - expected: 削除$1
+    pattern: /(?:リムーブ|デリート)(し|す|さ|でき)/
+    specs:
+      - from: リムーブする
+        to: 削除する
+      - from: デリートされる
+        to: 削除される
+  - expected: 処理$1
+    pattern: /ハンドル(し|す|さ|でき)/
+    specs:
+      - from: ハンドルする
+        to: 処理する
+  - expected: 再試行$1
+    pattern: /リトライ(し|す|さ|でき)/
+    specs:
+      - from: リトライできる
+        to: 再試行できる
