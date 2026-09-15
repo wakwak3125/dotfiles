@@ -16,3 +16,9 @@ fi
 if [[ -d "$HOME/.local/share/zsh/site-functions" ]]; then
   fpath=("$HOME/.local/share/zsh/site-functions" $fpath)
 fi
+
+# agent-platform の保存先。未設定だと plugin が投入のたびに接続先を聞いてくる。
+# 保存先を持たないマシンでは設定せず、従来どおり確認させる
+if [[ -d "$HOME/ap-store" ]]; then
+  export AP_STORE="$HOME/ap-store"
+fi
