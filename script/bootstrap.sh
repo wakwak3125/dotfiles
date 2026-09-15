@@ -232,8 +232,8 @@ merge_claude_settings() {
   fi
   claude_settings_tmp="$(mktemp)"
   # WorktreeCreate フック、ccstatusline (mise shim 経由) のステータスライン、dotfiles の plugin をマージ。
-  # textlint の hook は plugin (agents/plugins/textlint) に移した。marketplace を登録して有効にしておけば、
-  # Claude Code がセッション開始時に plugin をキャッシュへ入れ、package-lock.json から依存も入れる。
+  # textlint の hook は plugin (agents/plugins/textlint) に移した。ここでは settings.json に登録するだけで、
+  # plugin の導入と更新は install_claude_plugins が claude plugin で行う。
   # 以前 settings.json に直接書いていた claude-hook.mjs の hook は、plugin と二重に動かないよう取り除く
   jq --arg root "$ROOT" '
       def ours: (.command // "") | contains("claude-hook.mjs");
@@ -250,6 +250,20 @@ merge_claude_settings() {
 
 install_agent_skills() {
   bash "$ROOT/script/install-agent-skills.sh"
+}
+
+install_claude_plugins() {
+  # settings.json に marketplace を書いただけでは plugin は入らず、claude plugin list にも出ない。
+  # add と install は導入済みでも成功で返るので、毎回まとめて流して更新まで済ませる。
+  # plugin の中身を変えたときは plugin.json の version を上げないと、update はキャッシュを差し替えない
+  if ! command -v claude &>/dev/null; then
+    echo "==> WARN: claude not found, skipping Claude plugin install" >&2
+    return 0
+  fi
+  claude plugin marketplace add "$ROOT"
+  claude plugin marketplace update dotfiles
+  claude plugin install textlint@dotfiles
+  claude plugin update textlint@dotfiles
 }
 
 install_mise() {
@@ -378,6 +392,9 @@ run_step "Agent skill install" install_agent_skills
 
 # hunk 同梱 skill の登録 (mise で hunk が入った後に実行する)
 run_step "hunk skill link" link_hunk_skill
+
+# dotfiles の Claude Code plugin の導入 (依存の npm ci に mise の node を使うので mise の後に実行する)
+run_step "Claude plugin install" install_claude_plugins
 
 # 旧 wt (自前 Go 製) は git-wt へ移行済み。残存バイナリがあれば削除する
 run_step "Legacy wt cleanup" cleanup_legacy_wt
