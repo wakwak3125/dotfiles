@@ -32,7 +32,6 @@ dotfiles/
 │   ├── sheldon/plugins.toml # zsh プラグイン管理
 │   ├── textlint/     # Claude Code の textlint hook (claude-hook.mjs、ルール設定、prh 辞書)
 │   ├── starship.toml        # プロンプトテーマ
-│   ├── codex/*.config.toml  # Codex profile (bootstrap が ${HOME} を展開して ~/.codex へ書き出す)
 │   ├── ghostty/config       # Ghostty 設定 (macOS / Ubuntu デスクトップ)
 │   ├── terminator/   # Terminator 設定 (Ubuntu デスクトップ)
 │   ├── tmux/tmux.conf       # tmux 設定 (併存期間中のみ。herdr へ移行中)

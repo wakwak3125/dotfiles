@@ -139,20 +139,6 @@ link_common_config() {
   link_file "$ROOT/config/git/ignore" "$HOME/.config/git/ignore"
 }
 
-render_codex_profiles() {
-  # Codex profile は skill の絶対パスを要するため symlink せず、${HOME} を展開して書き出す
-  local src dest
-  ensure_dir "$HOME/.codex"
-  for src in "$ROOT"/config/codex/*.config.toml; do
-    [[ -f "$src" ]] || continue
-    dest="$HOME/.codex/$(basename "$src")"
-    # 旧来の symlink 越しに書き込むとリポジトリ側を上書きしてしまうので先に消す
-    rm -f "$dest"
-    sed "s|\${HOME}|$HOME|g" "$src" > "$dest"
-    echo "$dest was rendered"
-  done
-}
-
 link_linux_clipboard_tools() {
   [[ "$OS" != "Darwin" ]] || return 0
 
@@ -376,7 +362,6 @@ run_step "Platform setup" run_platform_setup
 # 共通 symlink
 # ================================================
 run_step "Common config symlinks" link_common_config
-run_step "Codex profile render" render_codex_profiles
 
 # Linux/WSL 用 pbcopy/pbpaste polyfill。macOS の /usr/bin/pbcopy は上書きしない。
 run_step "Linux clipboard tools" link_linux_clipboard_tools

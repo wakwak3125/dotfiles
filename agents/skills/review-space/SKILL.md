@@ -1,6 +1,6 @@
 ---
 name: review-space
-description: "コードレビュー環境を herdr 上に一発構築する。repo の workspace (なければ作成) に review tab を追加し、hunk (diff 表示) と Claude Code を 2 pane で開いて、Claude Code に hunk セッションへのインラインレビューコメント記入まで自動で任せる。PR があれば PR diff、なければベースブランチとの diff (PR 作成前のセルフレビュー) を対象にする。「レビュー space 開いて」「PR #N をレビュー環境で見たい」「セルフレビューして」「PR 作る前に見ておいて」等で発火。dev-task 等の他 skill が PR 作成前後に呼び出すことも想定。herdr 内 (HERDR_ENV=1) でのみ動作する。"
+description: "コードレビュー環境を herdr 上に一発構築する。repo の workspace (なければ作成) に review tab を追加し、hunk (diff 表示) と Claude Code を 2 pane で開いて、Claude Code に hunk セッションへのインラインレビューコメント記入まで自動で任せる。PR があれば PR diff、なければベースブランチとの diff (PR 作成前のセルフレビュー) を対象にする。「レビュー space 開いて」「PR #N をレビュー環境で見たい」「セルフレビューして」「PR 作る前に見ておいて」等で発火。他の skill が PR 作成前後に呼び出すことも想定。herdr 内 (HERDR_ENV=1) でのみ動作する。"
 ---
 
 # review-space
