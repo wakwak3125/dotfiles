@@ -8,6 +8,11 @@
             "type": "command",
             "command": "cd \"${CLAUDE_PLUGIN_ROOT}\" && PATH=\"$HOME/.local/share/mise/shims:$PATH\" node claude-hook.mjs markdown",
             "timeout": 30
+          },
+          {
+            "type": "command",
+            "command": "cd \"${CLAUDE_PLUGIN_ROOT}\" && PATH=\"$HOME/.local/share/mise/shims:$PATH\" node claude-hook.mjs comment",
+            "timeout": 30
           }
         ]
       }

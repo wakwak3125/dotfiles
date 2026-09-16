@@ -232,7 +232,7 @@ merge_claude_settings() {
   fi
   claude_settings_tmp="$(mktemp)"
   # WorktreeCreate フック、ccstatusline (mise shim 経由) のステータスライン、dotfiles の plugin をマージ。
-  # textlint の hook は plugin (agents/plugins/textlint) に移した。ここでは settings.json に登録するだけで、
+  # textlint と guard の hook は plugin (agents/plugins/) に置いた。ここでは settings.json に登録するだけで、
   # plugin の導入と更新は install_claude_plugins が claude plugin で行う。
   # 以前 settings.json に直接書いていた claude-hook.mjs の hook は、plugin と二重に動かないよう取り除く
   jq --arg root "$ROOT" '
@@ -242,6 +242,7 @@ merge_claude_settings() {
       | .hooks.WorktreeCreate = [{"hooks":[{"type":"command","command":"$HOME/.claude/hooks/worktree-create.sh"}]}]
       | .extraKnownMarketplaces.dotfiles = {"source": {"source": "directory", "path": $root}}
       | .enabledPlugins["textlint@dotfiles"] = true
+      | .enabledPlugins["guard@dotfiles"] = true
       | .statusLine = {"type":"command","command":"$HOME/.local/share/mise/shims/ccstatusline","padding":0}' \
     "$claude_settings" > "$claude_settings_tmp"
   mv "$claude_settings_tmp" "$claude_settings"
@@ -262,8 +263,11 @@ install_claude_plugins() {
   fi
   claude plugin marketplace add "$ROOT"
   claude plugin marketplace update dotfiles
-  claude plugin install textlint@dotfiles
-  claude plugin update textlint@dotfiles
+  local plugin
+  for plugin in textlint guard; do
+    claude plugin install "$plugin@dotfiles"
+    claude plugin update "$plugin@dotfiles"
+  done
 }
 
 install_mise() {

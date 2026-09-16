@@ -1,0 +1,39 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "PATH=\"$HOME/.local/share/mise/shims:$PATH\" node \"${CLAUDE_PLUGIN_ROOT}/guard-hook.mjs\" bash",
+            "timeout": 15
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "PATH=\"$HOME/.local/share/mise/shims:$PATH\" node \"${CLAUDE_PLUGIN_ROOT}/guard-hook.mjs\" sync",
+            "timeout": 15
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "PATH=\"$HOME/.local/share/mise/shims:$PATH\" node \"${CLAUDE_PLUGIN_ROOT}/guard-hook.mjs\" stop",
+            "timeout": 15
+          }
+        ]
+      }
+    ]
+  }
+}
