@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // Claude Code hook から textlint を実行する。
 //   markdown: PostToolUse (Write|Edit|MultiEdit)。書き込んだ Markdown の変更箇所だけを確認する
+//   comment:  PostToolUse (Write|Edit|MultiEdit)。Markdown 以外のファイルに書いたコメントの変更箇所を、言い換えの規則 (prh) だけで確認する
 //   pr:       PreToolUse (Bash)。gh pr create / edit のタイトルと本文を textlint と pr-writing skill の規範で確認し、指摘があれば実行を止める
 //   mcp:      PreToolUse (Linear / Notion の書き込み系 MCP ツール)。送信する文書を確認し、指摘があれば実行を止める
 // ルールをこのディレクトリの node_modules から解決させるため、スクリプトもここに置く。
@@ -34,21 +35,28 @@ async function readStdin() {
   return data;
 }
 
-let linterPromise;
+const linters = new Map();
 
-async function lint(text, filename) {
+// config は文書の種類で変える。散文は preset-ja-technical-writing まで見るが、
+// コードコメントは一文の長さや文末の規則が合わないので prh の言い換えだけを見る
+async function lint(text, filename, config = ".textlintrc.json") {
   // PR と MCP の hook はツール呼び出しごとに起動するので、textlint は確認が必要になってから読み込む。
   // node_modules がないときの失敗も、ここで読み込めば末尾の catch で exit 0 にできる。
-  // 項目の多い MCP 呼び出しで設定を何度も読み込まないよう、linter は 1 回だけ作る
-  linterPromise ??= (async () => {
-    const { createLinter, loadTextlintrc } = await import("textlint");
-    const descriptor = await loadTextlintrc({
-      configFilePath: path.join(HERE, ".textlintrc.json"),
-      node_modulesDir: path.join(HERE, "node_modules"),
-    });
-    return createLinter({ descriptor });
-  })();
-  const result = await (await linterPromise).lintText(text, filename);
+  // 項目の多い MCP 呼び出しで設定を何度も読み込まないよう、linter は設定ごとに 1 回だけ作る
+  if (!linters.has(config)) {
+    linters.set(
+      config,
+      (async () => {
+        const { createLinter, loadTextlintrc } = await import("textlint");
+        const descriptor = await loadTextlintrc({
+          configFilePath: path.join(HERE, config),
+          node_modulesDir: path.join(HERE, "node_modules"),
+        });
+        return createLinter({ descriptor });
+      })(),
+    );
+  }
+  const result = await (await linters.get(config)).lintText(text, filename);
   return result.messages.filter((m) => m.severity === 2);
 }
 
@@ -120,6 +128,115 @@ async function lintMarkdown(input) {
   if (messages.length === 0) return;
   report(
     `textlint: ${rel} の変更箇所に ${messages.length} 件の指摘があります。誤検知でなければ修正してください。`,
+    format(rel, messages),
+  );
+}
+
+// 行コメントの記号。ここにも BLOCK_COMMENT にも無い種類のファイルは確認しない
+const LINE_COMMENT = {
+  c: ["//"], cc: ["//"], cpp: ["//"], cs: ["//"], h: ["//"], hpp: ["//"],
+  cjs: ["//"], dart: ["//"], go: ["//"], java: ["//"], js: ["//"], jsx: ["//"],
+  kt: ["//"], kts: ["//"], mjs: ["//"], rs: ["//"], scala: ["//"], swift: ["//"], ts: ["//"], tsx: ["//"],
+  php: ["//", "#"],
+  bash: ["#"], nix: ["#"], py: ["#"], rb: ["#"], sh: ["#"], tf: ["#"], toml: ["#"], yaml: ["#"], yml: ["#"], zsh: ["#"],
+  hs: ["--"], lua: ["--"], sql: ["--"],
+  clj: [";"], el: [";"], lisp: [";"],
+};
+// 拡張子を持たない設定ファイルとスクリプト
+const LINE_COMMENT_BY_NAME = {
+  ".zshrc": ["#"], ".zshenv": ["#"], ".zprofile": ["#"], ".gitignore": ["#"],
+  zshenv: ["#"], gitconfig: ["#"], Makefile: ["#"], Dockerfile: ["#"],
+};
+// /* ... */ を解釈する種類
+const BLOCK_COMMENT = new Set([
+  "c", "cc", "cpp", "cs", "h", "hpp", "cjs", "css", "dart", "go", "java", "js", "jsx",
+  "kt", "kts", "mjs", "php", "rs", "scala", "scss", "swift", "ts", "tsx",
+]);
+const HAS_JAPANESE = /[\u3040-\u309f\u30a0-\u30ff\u4e00-\u9fff]/;
+
+function commentSyntax(filePath) {
+  const base = path.basename(filePath);
+  const ext = path.extname(base).slice(1).toLowerCase();
+  const markers = LINE_COMMENT[ext] ?? LINE_COMMENT_BY_NAME[base];
+  const block = BLOCK_COMMENT.has(ext);
+  return markers || block ? { markers: markers ?? [], block } : null;
+}
+
+// コメント以外を空白で潰す。行数と桁が変わらないので、textlint の指摘位置がそのまま元のファイルの位置になる。
+// 文字列リテラルの中までは見分けないため、"//" を含む文字列をコメントと取り違えることがある
+function maskToComments(content, { markers, block }) {
+  const out = [];
+  let inBlock = false;
+  for (const line of content.split("\n")) {
+    let masked = "";
+    let i = 0;
+    while (i < line.length) {
+      if (inBlock) {
+        const end = line.indexOf("*/", i);
+        if (end === -1) {
+          masked += line.slice(i);
+          break;
+        }
+        masked += `${line.slice(i, end)}  `;
+        i = end + 2;
+        inBlock = false;
+        continue;
+      }
+      const starts = [];
+      if (block) {
+        const at = line.indexOf("/*", i);
+        if (at !== -1) starts.push([at, "/*"]);
+      }
+      for (const marker of markers) {
+        let at = line.indexOf(marker, i);
+        // https:// の // をコメントの始まりと取り違えないようにする
+        while (at > 0 && marker === "//" && line[at - 1] === ":") at = line.indexOf(marker, at + 2);
+        if (at !== -1) starts.push([at, marker]);
+      }
+      if (starts.length === 0) {
+        masked += " ".repeat(line.length - i);
+        break;
+      }
+      starts.sort((a, b) => a[0] - b[0]);
+      const [at, kind] = starts[0];
+      // コメントの記号自体も空白にする。残すと Markdown の見出しや強調として解釈されてしまう
+      masked += " ".repeat(at - i + kind.length);
+      if (kind === "/*") {
+        i = at + 2;
+        inBlock = true;
+      } else {
+        masked += line.slice(at + kind.length);
+        break;
+      }
+    }
+    out.push(masked);
+  }
+  return out.join("\n");
+}
+
+// CLAUDE.md の「定訳のある一般語は日本語で書く」を、Markdown 以外のファイルのコメントにも当てる
+async function lintComment(input) {
+  const filePath = input.tool_input?.file_path;
+  if (!filePath || /\.(md|markdown)$/i.test(filePath)) return;
+  const rel = path.relative(input.cwd ?? process.cwd(), filePath);
+  if (rel.startsWith("..") || path.isAbsolute(rel)) return;
+  const syntax = commentSyntax(filePath);
+  if (!syntax) return;
+
+  const content = await readFile(filePath, "utf8");
+  const ranges = changedLineRanges(content, input);
+  if (ranges && ranges.length === 0) return;
+
+  const masked = maskToComments(content, syntax);
+  if (!HAS_JAPANESE.test(masked)) return;
+
+  // textlint は拡張子でプロセッサを選ぶので、潰したあとのテキストは Markdown として渡す
+  const messages = (await lint(masked, `${rel}.md`, ".textlintrc.comment.json")).filter(
+    (m) => !ranges || ranges.some(([s, e]) => m.line >= s && m.line <= e),
+  );
+  if (messages.length === 0) return;
+  report(
+    `textlint: ${rel} のコメントに ${messages.length} 件の指摘があります。誤検知でなければ修正してください。`,
     format(rel, messages),
   );
 }
@@ -321,7 +438,7 @@ async function consumeBlocked(key) {
   return Date.now() - stats.mtimeMs < BLOCKED_TTL_MS;
 }
 
-const handlers = { markdown: lintMarkdown, pr: lintPr, mcp: lintMcp };
+const handlers = { markdown: lintMarkdown, comment: lintComment, pr: lintPr, mcp: lintMcp };
 
 try {
   const handler = handlers[process.argv[2]];

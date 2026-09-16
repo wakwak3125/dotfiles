@@ -8,7 +8,12 @@
     {
       "name": "textlint",
       "source": "./agents/plugins/textlint",
-      "description": "Claude Code が書く Markdown、PR のタイトルと本文、Linear と Notion に送る文書の日本語を textlint で確認する hook"
+      "description": "Claude Code が書く Markdown とコードコメント、PR のタイトルと本文、Linear と Notion に送る文書の日本語を textlint で確認する hook"
+    },
+    {
+      "name": "guard",
+      "source": "./agents/plugins/guard",
+      "description": "CLAUDE.md の規約のうち機械的に判定できるもの (git config --global、ブランチ名、コミットメッセージ、agent docs の同期、設定変更後の反映) を hook で確認する"
     }
   ]
 }
