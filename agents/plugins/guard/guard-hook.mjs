@@ -87,32 +87,94 @@ function branchExists(cwd, name) {
   return !!git(cwd, ["rev-parse", "--verify", "--quiet", `refs/heads/${name}`]);
 }
 
+// heredoc の本文を同じ長さの空白に置き換える。PR 本文や埋め込みスクリプトに書かれた git commit を命令と取り違えないため。
+// 長さを保つのは、ここで得た位置を元のコマンドにそのまま当ててメッセージを取り出すため
+function maskHeredocs(command) {
+  return command.replace(/(<<-?\s*['"]?(\w+)['"]?[^\n]*\n)([\s\S]*?)(\n[ \t]*\2\b)/g, (_, head, _tag, body, tail) => {
+    return head + body.replace(/[^\n]/g, " ") + tail;
+  });
+}
+
+function expandPath(raw, vars) {
+  let p = unquote(raw).replace(/\$\{(\w+)\}|\$(\w+)/g, (m, a, b) => {
+    const name = a || b;
+    if (name === "HOME") return os.homedir();
+    return name in vars ? vars[name] : m;
+  });
+  p = p.replace(/^~(?=\/|$)/, os.homedir());
+  // 展開しきれない変数やコマンド置換が残るなら、行き先は分からない
+  return /[$`*?]/.test(p) ? null : p;
+}
+
+// git が実際に動くディレクトリを、手前の cd と代入、-C から求める。
+// hook に渡る cwd だけで見ると、main に居るセッションから worktree へコミットしたときに「main へ直接コミット」と誤って止めてしまう。
+// 分からないときは null を返し、呼び出し側は確認を飛ばす
+function effectiveDir(before, dashC, cwd) {
+  const vars = {};
+  let dir = cwd;
+  const re = /(?:^|[;&|(\n])\s*(?:(\w+)=("[^"]*"|'[^']*'|[^\s;&|)]*)(?=\s*(?:[;&\n]|$))|cd\s+("[^"]*"|'[^']*'|[^\s;&|)]+))/g;
+  for (const [, name, value, target] of before.matchAll(re)) {
+    if (name) {
+      const v = expandPath(value, vars);
+      if (v === null) delete vars[name];
+      else vars[name] = v;
+      continue;
+    }
+    const to = expandPath(target, vars);
+    if (to === null || to === "-") dir = null;
+    else if (path.isAbsolute(to)) dir = to;
+    else if (dir !== null) dir = path.resolve(dir, to);
+  }
+  if (dashC) {
+    const to = expandPath(dashC, vars);
+    if (to === null) return null;
+    if (path.isAbsolute(to)) return to;
+    return dir === null ? null : path.resolve(dir, to);
+  }
+  return dir;
+}
+
+const GIT_PREFIX = String.raw`(?:^|[;&|(\n])\s*(?:\w+=\S*\s+)*git\s+(?:-C\s+("[^"]*"|'[^']*'|\S+)\s+)?`;
+// git branch で枝を作るときにも付けられる長いオプション。これ以外の長いオプション (--merged、--contains など) は一覧や設定の操作で、枝は増えない
+const BRANCH_CREATE_FLAGS = /^--(?:force|track(?:=.*)?|no-track|quiet|create-reflog|recurse-submodules)$/;
+
 // これから作られるブランチ名だけを拾う。既存ブランチへの切り替えまで見ると、規約を決める前に作った枝で止まってしまう
 function extractNewBranches(command, cwd) {
-  const names = [];
-  const re = /(?:^|[;&|(\n])\s*(?:\w+=\S*\s+)*git\s+(?:-C\s+\S+\s+)?(switch|checkout|branch|wt)\b([^\n;&|]*)/g;
-  for (const [, sub, rest] of command.matchAll(re)) {
-    const args = rest.trim().split(/\s+/).filter(Boolean);
+  const found = [];
+  const masked = maskHeredocs(command);
+  const re = new RegExp(`${GIT_PREFIX}(switch|checkout|branch|wt)\\b([^\\n;&|]*)`, "g");
+  for (const m of masked.matchAll(re)) {
+    const [, dashC, sub, rest] = m;
+    // 2>&1 のようなリダイレクトは引数ではない
+    const args = rest.trim().split(/\s+/).filter((a) => a && !/^(?:\d*[<>]|&>)/.test(a));
+    if (args.some((a) => a === "--help" || a === "-h")) continue;
+    const dir = effectiveDir(masked.slice(0, m.index), dashC, cwd);
+    if (dir === null) continue;
     if (sub === "switch" || sub === "checkout") {
       const i = args.findIndex((a) => ["-c", "-C", "-b", "-B", "--create"].includes(a));
-      if (i >= 0 && args[i + 1]) names.push(unquote(args[i + 1]));
+      if (i >= 0 && args[i + 1]) found.push({ name: unquote(args[i + 1]), dir });
     } else if (sub === "branch") {
       // 削除・改名・一覧は新しい枝を作らない
-      if (args.some((a) => /^-(?:d|D|m|M|c|C|r|a|v|-delete|-move|-copy|-list|-show-current|-remotes|-all)$/.test(a))) continue;
+      if (args.some((a) => /^-(?:d|D|m|M|c|C|r|a|v|vv|l|u)$/.test(a) || (a.startsWith("--") && !BRANCH_CREATE_FLAGS.test(a)))) continue;
       const first = args.find((a) => !a.startsWith("-"));
-      if (first) names.push(unquote(first));
+      if (first) found.push({ name: unquote(first), dir });
     } else if (sub === "wt") {
       // git wt は既存 worktree への移動にも使うので、まだ無い枝を指したときだけ規約を見る
       const first = args.find((a) => !a.startsWith("-"));
-      if (first && !branchExists(cwd, unquote(first))) names.push(unquote(first));
+      if (first && !branchExists(dir, unquote(first))) found.push({ name: unquote(first), dir });
     }
   }
-  return names;
+  return found;
 }
 
-function checkBranchNames(command, cwd, root) {
-  if (!root.startsWith(`${PERSONAL_ROOT}${path.sep}`) && root !== PERSONAL_ROOT) return [];
-  const bad = extractNewBranches(command, cwd).filter((n) => !BRANCH_RULE.test(n));
+function isPersonal(root) {
+  return root === PERSONAL_ROOT || root.startsWith(`${PERSONAL_ROOT}${path.sep}`);
+}
+
+function checkBranchNames(command, cwd) {
+  const bad = extractNewBranches(command, cwd)
+    .filter(({ name, dir }) => !BRANCH_RULE.test(name) && isPersonal(git(dir, ["rev-parse", "--show-toplevel"])))
+    .map(({ name }) => name);
   if (bad.length === 0) return [];
   return [
     `guard: ブランチ名が規約に合いません: ${bad.join(", ")}`,
@@ -120,14 +182,13 @@ function checkBranchNames(command, cwd, root) {
   ];
 }
 
-// git commit -m "$(cat <<'EOF' ... EOF)" と -m "..." / --message=... を拾う。
+// git commit -m "$(cat <<'EOF' ... EOF)" と -m "..." / --message=... を拾う。-m は複数渡せて段落として連結されるので全部つなぐ。
 // -F や --amend --no-edit はメッセージがコマンドに現れないので対象外にする
-function extractCommitMessage(command) {
-  const heredoc = /(?:-m|--message)(?:=|\s+)"?\$\(\s*cat\s+<<-?\s*['"]?(\w+)['"]?[^\n]*\n([\s\S]*?)\n\s*\1\s*\)"?/.exec(command);
-  if (heredoc) return heredoc[2];
-  const quoted = /(?:-m|--message)(?:=|\s+)("(?:[^"\\]|\\.)*"|'[^']*')/.exec(command);
-  if (quoted) return unquote(quoted[1]);
-  return null;
+function extractCommitMessage(text) {
+  const parts = [];
+  const re = /(?:^|\s)(?:-[a-zA-Z]*m|--message)(?:=|\s+)(?:"?\$\(\s*cat\s+<<-?\s*['"]?(\w+)['"]?[^\n]*\n([\s\S]*?)\n\s*\1\s*\)"?|("(?:[^"\\]|\\.)*"|'[^']*'))/g;
+  for (const [, , heredoc, quoted] of text.matchAll(re)) parts.push(heredoc ?? unquote(quoted));
+  return parts.length > 0 ? parts.join("\n\n") : null;
 }
 
 function defaultBranch(cwd) {
@@ -136,29 +197,43 @@ function defaultBranch(cwd) {
 }
 
 function checkCommit(command, cwd) {
-  if (!/(?:^|[;&|(\n])\s*(?:\w+=\S*\s+)*git\s+(?:-C\s+\S+\s+)?commit\b/.test(command)) return [];
+  const masked = maskHeredocs(command);
+  const commits = [...masked.matchAll(new RegExp(`${GIT_PREFIX}commit\\b`, "g"))];
   const lines = [];
 
-  const current = git(cwd, ["rev-parse", "--abbrev-ref", "HEAD"]);
-  const base = defaultBranch(cwd);
-  if (current && base && current === base) {
-    lines.push(`guard: ${base} へ直接コミットしようとしています。作業用のブランチを切ってください。`);
-  }
+  commits.forEach((m, i) => {
+    const before = masked.slice(0, m.index);
+    const dir = effectiveDir(before, m[1], cwd);
+    // 同じコマンドの中で先に枝を切り替えていれば、実行時の枝は今の枝と違う
+    const switched = new RegExp(`${GIT_PREFIX}(?:switch|checkout|wt)\\b`).test(before);
+    if (dir !== null && !switched) {
+      const current = git(dir, ["rev-parse", "--abbrev-ref", "HEAD"]);
+      const base = defaultBranch(dir);
+      if (current && base && current === base) {
+        lines.push(`guard: ${base} へ直接コミットしようとしています。作業用のブランチを切ってください。`);
+      }
+    }
 
-  const message = extractCommitMessage(command);
-  if (message) {
+    const end = i + 1 < commits.length ? commits[i + 1].index : command.length;
+    // 次の命令の -m を拾わないよう、この git commit の引数だけを見る
+    const own = /^(?:[^;&|\n"']|"(?:[^"\\]|\\.)*"|'[^']*')*/.exec(command.slice(m.index + m[0].length, end))[0];
+    const message = extractCommitMessage(own);
+    if (!message) return;
     const subject = message.split("\n")[0].trim();
-    if (!CONVENTIONAL.test(subject)) {
+    // fixup! などは autosquash で元のコミットに畳まれるので、件名の元の部分だけを見て trailer は求めない
+    const autosquash = /^(?:(?:fixup|squash|amend)! )+/.exec(subject);
+    const body = autosquash ? subject.slice(autosquash[0].length) : subject;
+    if (!CONVENTIONAL.test(body)) {
       lines.push(`guard: コミットの件名が conventional commits の形式ではありません: ${subject}`);
       lines.push("  形式: <type>(<scope>): <説明>  type は feat/fix/docs/style/refactor/perf/test/build/ci/chore/revert");
-    } else if (!JAPANESE.test(subject)) {
+    } else if (!JAPANESE.test(body)) {
       lines.push(`guard: コミットの件名を日本語で書いてください: ${subject}`);
     }
-    if (!/Co-Authored-By:.*@anthropic\.com/i.test(message)) {
+    if (!autosquash && !/Co-Authored-By:.*@anthropic\.com/i.test(message)) {
       lines.push("guard: コミットメッセージの末尾に Co-Authored-By の行がありません。");
     }
-  }
-  return lines;
+  });
+  return [...new Set(lines)];
 }
 
 async function runBash(input) {
@@ -166,11 +241,10 @@ async function runBash(input) {
   if (typeof command !== "string" || SKIP_MARKER.test(command)) return;
   const cwd = input.cwd || process.cwd();
   const root = git(cwd, ["rev-parse", "--show-toplevel"]);
-  if (!root) return;
 
   const lines = [
     ...checkGitConfig(command, root),
-    ...checkBranchNames(command, cwd, root),
+    ...checkBranchNames(command, cwd),
     ...checkCommit(command, cwd),
   ];
   if (lines.length === 0) return;
