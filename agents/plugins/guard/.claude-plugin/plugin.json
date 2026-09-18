@@ -1,6 +1,6 @@
 {
   "name": "guard",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "CLAUDE.md の規約のうち機械的に判定できるもの (git config --global、ブランチ名、コミットメッセージ、agent docs の同期、設定変更後の反映) を hook で確認する",
   "author": {
     "name": "wakwak3125"
