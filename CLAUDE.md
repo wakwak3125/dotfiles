@@ -42,7 +42,7 @@ dotfiles/
 ├── nvim/init.lua     # Neovim 設定 (lazy.nvim)
 ├── pbcopy            # pbcopy polyfill (Linux/WSL)
 ├── pbpaste           # pbpaste polyfill (Linux/WSL)
-├── server/           # 自宅サーバー用 (server-profile: eco/stream/performance 切替 CLI + systemd unit。install.sh で /usr/local/sbin 等へコピー)
+├── server/           # 自宅サーバー用 (server-profile: eco/stream/performance 切替 CLI + systemd unit、gui: GUI の起動・停止 CLI。install.sh で /usr/local/sbin 等へコピー)
 ├── script/           # インストール・ユーティリティスクリプト
 │   ├── bootstrap.sh  # 初期セットアップ (symlink 作成、gh skill install 含む)
 │   ├── claude-status # Claude Code ダッシュボード
@@ -77,6 +77,7 @@ dotfiles/
 - `linux.sh` はデスクトップ有無を `/usr/share/{wayland-sessions,xsessions}` で判定し、GUI 向け処理 (wl-clipboard/xclip、Ghostty/Zed/Terminator 設定、GNOME 入力切替 Ctrl+Space) を分岐する。アプリ本体 (Ghostty 等) は snap 等で別途導入
 - Ghostty/GNOME Terminal はログインシェルを起動しないため、herdr-auto-attach は Linux では `SHLVL=1` のシェルも対象にする
 - Neovim の IME 切替は ibus (`xkb:us::eng`) を使う。Karabiner の Ctrl+T で IME オフは macOS 専用
+- 自宅サーバー (wakwak-server) は `multi-user.target` で起動する。GUI は `sudo gui on` / `sudo gui off` で必要なときだけ起動・停止する。GDM は自動ログインにしてある。Wayland の RustDesk はログイン画面を操作できないため。設定は `server/install.sh` が入れる
 
 ### WSL2
 

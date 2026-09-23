@@ -1,0 +1,60 @@
+#!/usr/bin/env bash
+# gui: headless (multi-user.target) で起動したサーバーで、GUI を必要なときだけ起動・停止する
+#
+# GDM は自動ログインにしてある (install.sh)。Wayland の RustDesk はログイン画面を操作できず、
+# ログイン済みのセッションがないとつながらないため
+#
+# 使い方:
+#   gui on         GDM を起動する (自動ログインしたセッションで RustDesk が使えるようになる)
+#   gui off [-f]   GDM を停止する。GUI セッションごと終了するので、OBS が動いていれば -f なしでは止めない
+#   gui status     GDM と GUI セッションの状態を表示する
+set -euo pipefail
+
+# gdm3.service を直接指定せず、Ubuntu が symlink で張る display-manager.service を使う
+UNIT=display-manager.service
+
+log() { echo "gui: $*" >&2; }
+die() { log "error: $*"; exit 1; }
+
+need_root() { [ "$(id -u)" = 0 ] || die "root で実行してください"; }
+
+# class=user かつ type が wayland/x11 のものだけを GUI セッションとみなす。ssh や linger の manager は除く
+gui_sessions() {
+  local id type
+  loginctl list-sessions --no-legend | while read -r id _; do
+    type=$(loginctl show-session "$id" -p Type --value)
+    case "$type" in wayland|x11) ;; *) continue ;; esac
+    echo "$id $(loginctl show-session "$id" -p Name --value) ($type)"
+  done
+}
+
+on() {
+  need_root
+  systemctl start "$UNIT"
+  log "started. RustDesk で接続できるまで数秒かかる"
+}
+
+off() {
+  need_root
+  if [ "${1:-}" != -f ] && pgrep -x obs >/dev/null; then
+    die "OBS が動いているため止めない (配信ごと終了してよければ -f を付ける)"
+  fi
+  systemctl stop "$UNIT"
+  log "stopped"
+}
+
+status() {
+  echo "default:  $(systemctl get-default)"
+  echo "gdm:      $(systemctl is-active "$UNIT" || true)"
+  local s
+  s=$(gui_sessions)
+  echo "sessions: ${s:-(なし)}"
+}
+
+case "${1:-}" in
+  on) on ;;
+  off) off "${2:-}" ;;
+  status) status ;;
+  ""|-h|--help) sed -n '2,10p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+  *) die "不明なコマンド: $1" ;;
+esac
