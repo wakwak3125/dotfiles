@@ -76,6 +76,14 @@
 [init]
   defaultBranch = master
 
+# bw-company のリポジトリだけ会社のメールアドレスで commit する。
+# clone 先のディレクトリに依存しないよう remote URL で判定する。
+# [user] より後ろに置かないと上書きされない
+[includeIf "hasconfig:remote.*.url:https://github.com/bw-company/**"]
+  path = ~/.gitconfig_bw-company
+[includeIf "hasconfig:remote.*.url:git@github.com:bw-company/**"]
+  path = ~/.gitconfig_bw-company
+
 # マシン固有設定 (git-wt の hook パス等)。後勝ちさせるため末尾に置く。
 # 存在しない場合 git は黙って無視する
 [include]
