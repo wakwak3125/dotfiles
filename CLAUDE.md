@@ -21,7 +21,7 @@ dotfiles/
 │   │   ├── manifest.tsv # skill ごとの install 先 agent 定義
 │   │   └── external.tsv # 外部 repo 由来の skill (skills.sh = `npx skills add` で導入)
 │   ├── agents/       # Claude Code subagent 定義 (spec-planner-*, japan-{ehr,receipt}-* 等)
-│   ├── plugins/      # Claude Code plugin (textlint: 日本語の lint hook / guard: 規約の確認 hook)。直下の .claude-plugin/marketplace.json で登録
+│   ├── plugins/      # Claude Code plugin (textlint: 日本語の lint hook / guard: 規約の確認 hook / deep-loop: 夜間の長時間の調査と設計)。直下の .claude-plugin/marketplace.json で登録
 │   └── hooks/        # 個人 hooks (worktree-create.sh 等) ※ファイル単位で symlink
 ├── config/           # XDG_CONFIG_HOME 配下の設定
 │   ├── git/ignore    # グローバル gitignore
@@ -94,6 +94,7 @@ dotfiles/
 - **mise**: ツール追加/変更後は `mise install` で反映
 - **textlint**: `agents/plugins/textlint/` の plugin。bootstrap が marketplace を登録して有効にし、依存は Claude Code が package-lock.json から入れる (ルールを追加したら lockfile も更新し、plugin.json の version を上げる)。Claude Code が書いた `.md` とソースコードのコメント (どちらも作業ディレクトリ内の変更箇所のみ)、`gh pr create/edit` のタイトル・本文、Linear / Notion の MCP ツールで送信する文書を hook で確認する。コメントは言い換えの規則 (`prh.yml`) だけを見る。文体の規則はコードコメントに合わないため。PR と MCP の hook は指摘があると実行を止める。誤検知のとき、PR は `<!-- textlint-disable -->` かコマンドに `TEXTLINT_SKIP=1` を付け、MCP は同じ内容のまま再実行すれば一度だけ通る
 - **guard**: `agents/plugins/guard/` の plugin。CLAUDE.md の規約のうち機械的に判定できるものを hook で確認する。`git config --global` での書き換え (dotfiles のみ)、個人リポジトリで新しく作るブランチの名前、コミットメッセージの形式と日本語と `Co-Authored-By`、ベースブランチへの直接コミットは Bash の実行前に止める。誤検知のときはコマンドの先頭に `GUARD_SKIP=1` を付ける。`agents/claude` と `agents/codex` の対応する文書がずれたときは編集の直後に知らせる (見出しに `(Claude Code 固有)` か `(Codex 固有)` を付けたセクションは比較から外れる)。dotfiles で `sheldon lock` と `mise install`、plugin の version 上げを忘れたときは応答の終わりに知らせる
+- **deep-loop**: `agents/plugins/deep-loop/` の plugin。実装前の設計、リファクタリングの調査、潜在バグの洗い出し、技術調査を夜間にサーバーで回す。入口は `deep-loop` skill で、brief を固めて `scripts/deep-loop` (runner) に渡し、runner が `claude -p "/deep-loop:run <作業ディレクトリ>"` を切り離して走らせる。1 ラウンドを 1 回の Workflow (`workflows/round.js`) にして最大 3 回回し、指揮役のセッションはラウンドごとの要約だけを受け取る。作業役は Sonnet、planner・反証・統合・最終の書き手は Opus。hook は、作業役が書いた `*.claims.json` の引用を出典と照合して結果を本人に返すこと (Write でも Bash のヒアドキュメントでも拾い、作業役の終わりにも照合漏れを埋める) と、夜間の実行で作業役の Write / Edit を作業ディレクトリに限ること。`claude -p` はバックグラウンドの Workflow を既定で 600 秒しか待たないので、runner が `CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS=0` を付けて起動する。作業ディレクトリは `~/.local/state/deep-loop/<名前>`。照合と hook のテストは `node --test agents/plugins/deep-loop/scripts/`
 - **zshrc_local**: マシン固有設定（gitignore対象）。シェルデバッグ時は `.zshrc` から読み込まれることに注意
 - **ghq**: 本体は mise、root (`~/src`) は `gitconfig` の `[ghq] root` で管理。bootstrap は root の作成と `ghq root` の一致確認だけ行う
 - **gitconfig**: `~/.gitconfig` へ symlink されるので `git config --global` で直接書き換えず、このファイルを編集する。`$HOME` の展開が必要な設定 (git-wt の hook パス等) だけは bootstrap が `~/.gitconfig_local` へ書き出し、`gitconfig` 末尾の include で後勝ちさせる

@@ -14,6 +14,11 @@
       "name": "guard",
       "source": "./agents/plugins/guard",
       "description": "CLAUDE.md の規約のうち機械的に判定できるもの (git config --global、ブランチ名、コミットメッセージ、agent docs の同期、設定変更後の反映) を hook で確認する"
+    },
+    {
+      "name": "deep-loop",
+      "source": "./agents/plugins/deep-loop",
+      "description": "実装前の設計、リファクタリングの調査、潜在バグの洗い出し、技術調査を夜間にサーバーで回す。問いを立てて解消するラウンドを Workflow で最大 3 回回し、作業役は Sonnet、引用は hook で出典と照合する"
     }
   ]
 }

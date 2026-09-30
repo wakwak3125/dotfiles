@@ -243,6 +243,7 @@ merge_claude_settings() {
       | .extraKnownMarketplaces.dotfiles = {"source": {"source": "directory", "path": $root}}
       | .enabledPlugins["textlint@dotfiles"] = true
       | .enabledPlugins["guard@dotfiles"] = true
+      | .enabledPlugins["deep-loop@dotfiles"] = true
       | .statusLine = {"type":"command","command":"$HOME/.local/share/mise/shims/ccstatusline","padding":0}' \
     "$claude_settings" > "$claude_settings_tmp"
   mv "$claude_settings_tmp" "$claude_settings"
@@ -264,7 +265,7 @@ install_claude_plugins() {
   claude plugin marketplace add "$ROOT"
   claude plugin marketplace update dotfiles
   local plugin
-  for plugin in textlint guard; do
+  for plugin in textlint guard deep-loop; do
     claude plugin install "$plugin@dotfiles"
     claude plugin update "$plugin@dotfiles"
   done
