@@ -11,11 +11,13 @@
 #
 # 作業ディレクトリは ${DEEP_LOOP_ROOT:-~/.local/state/deep-loop}/<名前>。
 # 開発中の plugin を試すときは DEEP_LOOP_PLUGIN_DIR に plugin のディレクトリを渡す（claude --plugin-dir に渡る）。
+# 1 回の実行が使えるメモリは DEEP_LOOP_MEMORY_MAX（既定 16G、systemd の MemoryMax の書式）で絞る。
 
 set -euo pipefail
 
 # 相対パスのまま使うと、切り離した先の cd の後で作業ディレクトリを見失う
 ROOT="$(realpath -m "${DEEP_LOOP_ROOT:-$HOME/.local/state/deep-loop}")"
+MEMORY_MAX="${DEEP_LOOP_MEMORY_MAX:-16G}"
 
 die() {
   echo "deep-loop: $*" >&2
@@ -23,7 +25,20 @@ die() {
 }
 
 usage() {
-  sed -n '2,14p' "$0" | sed 's/^# \{0,1\}//'
+  sed -n '2,15p' "$0" | sed 's/^# \{0,1\}//'
+}
+
+# 予約した実行が夜中に起動できずに終わるのを避けるため、上限を掛けられるかは受け付ける前に確かめる
+require_memory_cap() {
+  [[ "$MEMORY_MAX" =~ ^([0-9]+[KMGT]?|[0-9]+%|infinity)$ ]] ||
+    die "DEEP_LOOP_MEMORY_MAX は 16G や 50% の形で書く（$MEMORY_MAX は読めない）"
+  command -v systemd-run >/dev/null && systemctl --user show-environment >/dev/null 2>&1 ||
+    die "systemd のユーザーセッションに繋がらないので、メモリの上限を掛けられない"
+}
+
+# 実行ごとの systemd の scope の名前。名前だけだと DEEP_LOOP_ROOT の違う実行（テストなど）と衝突するので、作業ディレクトリから決める
+scope_unit() {
+  echo "deep-loop-$(basename "$1")-$(printf '%s' "$1" | cksum | cut -d' ' -f1).scope"
 }
 
 check_name() {
@@ -81,12 +96,21 @@ launch() {
   rm -f "$dir/exit_code"
   # 権限の確認に応じる人がいないので bypassPermissions で走らせる。作業役の書き込みは plugin の hook が作業ディレクトリに限る。
   # claude -p はバックグラウンドの作業（Workflow）を既定で 600 秒しか待たずに打ち切るので、上限を外す（実測）。
-  # setsid で端末のセッションから切り離し、打った端末を閉じても止まらないようにする
-  DEEP_LOOP_DIR="$dir" CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS=0 setsid bash -c '
+  # setsid で端末のセッションから切り離し、打った端末を閉じても止まらないようにする。
+  # 作業役が並列に走らせた Gradle のテストが積み上がってホスト全体を OOM にし、無関係な常駐プロセスまで殺された（2026-10-01）。
+  # claude を scope に入れて実行全体を MemoryMax で絞り、溢れたら実行の中だけで OOM kill させる。
+  # swap を許すと上限を超えた分でホストの swap を食い潰すので、swap は使わせない。
+  # Gradle が既存の daemon に繋ぐとビルドが scope の外で走るので、daemon は使わせない。
+  # claude が終わっても、親を失った test worker が scope に残って何時間もメモリを握り続けた（実測）ので、最後に scope ごと止める。
+  # exit_code はその後に書き、exit_code があれば後片付けまで済んでいるようにする
+  DEEP_LOOP_DIR="$dir" CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS=0 \
+    GRADLE_OPTS="${GRADLE_OPTS:+$GRADLE_OPTS }-Dorg.gradle.daemon=false" setsid bash -c '
     delay="$1"
     cwd="$2"
     dir="$3"
-    shift 3
+    unit="$4"
+    memory_max="$5"
+    shift 5
     sleep "$delay"
     # 予約の間にリポジトリが消えていたら、呼び出し元の cwd のまま bypassPermissions で走らせない
     if ! cd "$cwd"; then
@@ -94,10 +118,15 @@ launch() {
       echo 1 >"$dir/exit_code"
       exit 1
     fi
-    claude -p --permission-mode bypassPermissions --output-format json "$@" "/deep-loop:run $dir" \
+    # 前回の実行の後片付けが漏れて scope が残っていると、同じ名前の scope を作れない
+    systemctl --user stop "$unit" 2>/dev/null
+    systemd-run --user --scope --quiet --unit="$unit" -p MemoryMax="$memory_max" -p MemorySwapMax=0 \
+      claude -p --permission-mode bypassPermissions --output-format json "$@" "/deep-loop:run $dir" \
       >"$dir/session.json" 2>"$dir/session.log"
-    echo $? >"$dir/exit_code"
-  ' deep-loop "$delay" "$cwd" "$dir" "${plugin_args[@]}" </dev/null >/dev/null 2>&1 &
+    code=$?
+    systemctl --user stop "$unit" 2>/dev/null
+    echo "$code" >"$dir/exit_code"
+  ' deep-loop "$delay" "$cwd" "$dir" "$(scope_unit "$dir")" "$MEMORY_MAX" "${plugin_args[@]}" </dev/null >/dev/null 2>&1 &
   local pid=$!
   echo "$pid $(start_time "$pid")" >"$dir/run.pid"
 }
@@ -140,6 +169,7 @@ cmd_start() {
     esac
   done
   [[ -t 0 ]] && die "brief を標準入力で渡す（例: deep-loop start $name < brief.md）"
+  require_memory_cap
   local delay=0
   if [[ -n "$at" ]]; then delay="$(delay_until "$at")"; fi
   # brief は一時ファイルに読んでから置く。空のまま作業ディレクトリを作ると、start も resume もできない名前が残る
@@ -190,6 +220,7 @@ cmd_resume() {
   local dir="$ROOT/$name"
   [[ -s "$dir/brief.md" ]] || die "$name が無い（deep-loop start で始める）"
   running "$dir" && die "$name はもう走っている"
+  require_memory_cap
   local delay=0
   if [[ -n "$at" ]]; then delay="$(delay_until "$at")"; fi
   launch "$dir" "$delay"
@@ -266,6 +297,8 @@ cmd_stop() {
   read -r pid _ <"$dir/run.pid"
   # setsid で起こしたのでプロセスグループごと止める（claude と Workflow の子まで届く）
   kill -TERM -- "-$pid"
+  # 起動役が後片付けの前に死ぬので、グループの外に出た子（Gradle の test worker など）は scope ごと止めて片づける
+  systemctl --user stop "$(scope_unit "$dir")" 2>/dev/null || true
   echo "deep-loop: $1 を止めた。deep-loop resume $1 で完了したラウンドの続きから再開できる"
 }
 

@@ -203,15 +203,34 @@ function runner(args, { input, env = {} } = {}) {
   });
 }
 
-function fakeClaude() {
+function fakeClaude({ hang = false } = {}) {
   const bin = temp('deep-loop-bin-');
   const script = join(bin, 'claude');
   writeFileSync(
     script,
-    '#!/usr/bin/env bash\nprintf "%s\\n" "$PWD" "$CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS" "$DEEP_LOOP_DIR" "$@" > "$DEEP_LOOP_DIR/fake-claude.txt"\necho \'{"total_cost_usd": 1.5, "result": "ok"}\'\n',
+    [
+      '#!/usr/bin/env bash',
+      'cgroup="/sys/fs/cgroup$(cut -d: -f3 /proc/self/cgroup)"',
+      'printf "%s\\n" "$PWD" "$CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS" "$DEEP_LOOP_DIR" "$(cat "$cgroup/memory.max")" "$(cat "$cgroup/memory.swap.max")" "$GRADLE_OPTS" "$@" > "$DEEP_LOOP_DIR/fake-claude.txt"',
+      // 親を失っても残り続ける Gradle の test worker の代わり
+      'setsid sleep 300 </dev/null >/dev/null 2>&1 &',
+      'echo $! > "$DEEP_LOOP_DIR/orphan.pid"',
+      ...(hang ? ['sleep 300'] : []),
+      'echo \'{"total_cost_usd": 1.5, "result": "ok"}\'',
+      '',
+    ].join('\n'),
   );
   chmodSync(script, 0o755);
   return `${bin}:${process.env.PATH}`;
+}
+
+function alive(pid) {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 async function waitFor(path) {
@@ -220,10 +239,10 @@ async function waitFor(path) {
   }
 }
 
-test('runner は repo を cwd にし、待ちの上限を外して claude -p を切り離して走らせる', async () => {
+test('runner は repo を cwd にし、待ちの上限を外して claude -p をメモリの上限付きで切り離して走らせ、残った子を片づける', async () => {
   const root = temp('deep-loop-root-');
   const repo = temp('deep-loop-repo-');
-  const env = { DEEP_LOOP_ROOT: root, PATH: fakeClaude() };
+  const env = { DEEP_LOOP_ROOT: root, PATH: fakeClaude(), DEEP_LOOP_MEMORY_MAX: '1G', GRADLE_OPTS: '-Xmx64m' };
 
   const started = runner(['start', 'demo', '--repo', repo, '--rounds', '2'], { input: '# brief\n', env });
   assert.equal(started.status, 0, started.stderr);
@@ -231,10 +250,16 @@ test('runner は repo を cwd にし、待ちの上限を外して claude -p を
   await waitFor(join(dir, 'exit_code'));
 
   assert.equal(readFileSync(join(dir, 'exit_code'), 'utf8').trim(), '0');
-  const [cwd, ceiling, runDir, ...args] = readFileSync(join(dir, 'fake-claude.txt'), 'utf8').trim().split('\n');
+  const [cwd, ceiling, runDir, memoryMax, swapMax, gradleOpts, ...args] = readFileSync(join(dir, 'fake-claude.txt'), 'utf8')
+    .trim()
+    .split('\n');
   assert.equal(cwd, repo);
   assert.equal(ceiling, '0');
   assert.equal(runDir, dir);
+  assert.equal(memoryMax, String(1024 ** 3));
+  assert.equal(swapMax, '0');
+  assert.equal(gradleOpts, '-Xmx64m -Dorg.gradle.daemon=false');
+  assert.equal(alive(Number(readFileSync(join(dir, 'orphan.pid'), 'utf8'))), false);
   assert.equal(args.at(-1), `/deep-loop:run ${dir}`);
   assert.deepEqual(JSON.parse(readFileSync(join(dir, 'meta.json'), 'utf8')), { maxRounds: 2, repos: [repo] });
 
@@ -257,7 +282,23 @@ test('runner は repo を cwd にし、待ちの上限を外して claude -p を
   assert.match(status.stdout, /費用: 1\.50 USD/);
 });
 
-test('runner は読めない --at、値の無い --at、空の brief、同じ名前の start を、作業ディレクトリを残さずに断る', () => {
+test('runner の stop は claude と、プロセスグループの外に出た子まで止める', async () => {
+  const root = temp('deep-loop-root-');
+  const env = { DEEP_LOOP_ROOT: root, PATH: fakeClaude({ hang: true }) };
+
+  assert.equal(runner(['start', 'hang'], { input: '# brief\n', env }).status, 0);
+  const dir = join(root, 'hang');
+  await waitFor(join(dir, 'orphan.pid'));
+  const orphan = Number(readFileSync(join(dir, 'orphan.pid'), 'utf8'));
+  assert.equal(alive(orphan), true);
+
+  const stopped = runner(['stop', 'hang'], { env });
+  assert.equal(stopped.status, 0, stopped.stderr);
+  assert.equal(alive(orphan), false);
+  assert.match(runner(['status', 'hang'], { env }).stdout, /停止/);
+});
+
+test('runner は読めない --at、値の無い --at、空の brief、読めないメモリの上限、同じ名前の start を、作業ディレクトリを残さずに断る', () => {
   const root = temp('deep-loop-root-');
   const env = { DEEP_LOOP_ROOT: root, PATH: fakeClaude() };
 
@@ -269,6 +310,10 @@ test('runner は読めない --at、値の無い --at、空の brief、同じ名
   const empty = runner(['start', 'empty'], { input: '', env });
   assert.notEqual(empty.status, 0);
   assert.equal(existsSync(join(root, 'empty')), false);
+
+  const badMemory = runner(['start', 'bad-memory'], { input: '# brief\n', env: { ...env, DEEP_LOOP_MEMORY_MAX: 'lots' } });
+  assert.notEqual(badMemory.status, 0);
+  assert.equal(existsSync(join(root, 'bad-memory')), false);
 
   mkdirSync(join(root, 'taken'), { recursive: true });
   writeFileSync(join(root, 'taken', 'brief.md'), '# brief\n');
