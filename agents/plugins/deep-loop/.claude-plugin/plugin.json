@@ -1,6 +1,6 @@
 {
   "name": "deep-loop",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "調査・設計・リファクタリング調査・潜在バグの洗い出しを、Workflow を最大 3 ラウンド回して context を腐らせずに進め、引用を出典と照合した成果物を出す",
   "author": {
     "name": "wakwak3125"
