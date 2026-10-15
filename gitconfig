@@ -83,6 +83,8 @@
   path = ~/.gitconfig_bw-company
 [includeIf "hasconfig:remote.*.url:git@github.com:bw-company/**"]
   path = ~/.gitconfig_bw-company
+[includeIf "hasconfig:remote.*.url:ssh://git@github.com/bw-company/**"]
+  path = ~/.gitconfig_bw-company
 
 # マシン固有設定 (git-wt の hook パス等)。後勝ちさせるため末尾に置く。
 # 存在しない場合 git は黙って無視する
