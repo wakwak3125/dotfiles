@@ -67,7 +67,9 @@ PR のタイトルと本文は pr-writing skill に従って書く。
 
 ## org 固有設定
 
-組織・会社固有の設定は `~/src/github.com/<org>/CLAUDE.md` および `AGENTS.md` に置く (dotfiles の `agents/claude/org/<org>/CLAUDE.md` / `agents/codex/org/<org>/AGENTS.md` から symlink、gitignore 対象)。その org 配下のリポジトリ・worktree で作業するときだけ読み込まれる。
+組織・会社固有の設定は `~/src/github.com/<org>/CLAUDE.md` および `AGENTS.md` に置く (private リポジトリ [wakwak3125/agent-private](https://github.com/wakwak3125/agent-private) の `org/<org>/` から symlink)。その org 配下のリポジトリ・worktree で作業するときだけ読み込まれる。
+
+プロジェクトごとの Claude Code 設定は、各リポジトリの git に入れず agent-private の `projects/<org>/<repo>/settings.local.json` に置く。checkout と worktree の `.claude/settings.local.json` へは symlink で配られる。
 
 ## 注意事項
 

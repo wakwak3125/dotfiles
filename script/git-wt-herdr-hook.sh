@@ -10,6 +10,11 @@ set -uo pipefail
 
 mode="${1:-}"
 
+# プロジェクトの Claude Code 設定はエージェント経由でも herdr 外でも配りたいので、下の早期 exit より前に置く。
+# delete で呼ぶのは、実ファイルに化けた settings.local.json を worktree ごと消す前に実体へ戻すため
+project_settings="$HOME/.claude/hooks/project-settings.sh"
+[[ -x "$project_settings" ]] && "$project_settings" link "$PWD"
+
 # エージェント (Claude Code / Codex) が git wt した場合は tab/workspace を作らない。
 # 複数リポジトリを触るタスクで無関係な space/tab が量産されるのを防ぐため。
 # エージェント経由でも作らせたいときは GIT_WT_MUX_HOOK=1 を付けて実行する。

@@ -12,17 +12,15 @@ WSL2 の場合、Windows 側ターミナル (WezTerm 等) の設定はこのリ�
 dotfiles/
 ├── agents/           # Claude Code / Codex 向け agent 共通資産
 │   ├── claude/       # Claude Code 用ドキュメント
-│   │   ├── global/CLAUDE.md      # 全プロジェクト共通の個人指示 (-> ~/.claude/CLAUDE.md)
-│   │   └── org/<org>/CLAUDE.md   # org 単位の個人指示 (gitignore; -> ~/src/github.com/<org>/CLAUDE.md)
+│   │   └── global/CLAUDE.md      # 全プロジェクト共通の個人指示 (-> ~/.claude/CLAUDE.md)
 │   ├── codex/        # Codex 用ドキュメント (中身は claude/ 側と同一に保つ)
-│   │   ├── global/AGENTS.md      # 全プロジェクト共通の個人指示 (-> ~/.codex/AGENTS.md)
-│   │   └── org/<org>/AGENTS.md   # org 単位の個人指示 (gitignore; -> ~/src/github.com/<org>/AGENTS.md)
+│   │   └── global/AGENTS.md      # 全プロジェクト共通の個人指示 (-> ~/.codex/AGENTS.md)
 │   ├── skills/       # 個人 skills (`gh skill` で Claude Code / Codex に install)
 │   │   ├── manifest.tsv # skill ごとの install 先 agent 定義
 │   │   └── external.tsv # 外部 repo 由来の skill (skills.sh = `npx skills add` で導入)
 │   ├── agents/       # Claude Code subagent 定義 (spec-planner-*, japan-{ehr,receipt}-* 等)
 │   ├── plugins/      # Claude Code plugin (textlint: 日本語の lint hook / guard: 規約の確認 hook / deep-loop: 夜間の長時間の調査と設計)。直下の .claude-plugin/marketplace.json で登録
-│   └── hooks/        # 個人 hooks (worktree-create.sh 等) ※ファイル単位で symlink
+│   └── hooks/        # 個人 hooks (worktree-create.sh, project-settings.sh 等) ※ファイル単位で symlink
 ├── config/           # XDG_CONFIG_HOME 配下の設定
 │   ├── git/ignore    # グローバル gitignore
 │   ├── ccstatusline/settings.json # Claude Code ステータスライン (mise: npm:ccstatusline 経由)
@@ -89,7 +87,8 @@ dotfiles/
 
 - **OS 分岐**: `.zshrc` や `bootstrap.sh` に macOS/Linux の条件分岐あり。片方だけ壊さないよう注意
 - **symlink**: 設定ファイルと Claude Code 用 agents/hooks は symlink で管理。skills は `gh skill` でコピーインストールする
-- **agent docs**: `agents/claude/{global,org}` (CLAUDE.md) と `agents/codex/{global,org}` (AGENTS.md) は同一内容を保つ (エージェント固有指示が必要なときだけ分岐)。global は追跡、org は gitignore 対象。bootstrap で symlink される
+- **agent docs**: `agents/claude/global` (CLAUDE.md) と `agents/codex/global` (AGENTS.md) は同一内容を保つ (エージェント固有指示が必要なときだけ分岐)。bootstrap で symlink される
+- **agent-private**: 会社固有の情報を含む org 指示 (`org/<org>/{CLAUDE,AGENTS}.md`) とプロジェクトの Claude Code 設定 (`projects/<org>/<repo>/settings.local.json`) は private リポジトリ `wakwak3125/agent-private` (`~/src/github.com/wakwak3125/agent-private`) に置き、マシン間は git で揃える。bootstrap が ghq で clone して symlink を張る。プロジェクト設定の配布は `agents/hooks/project-settings.sh` が担い、bootstrap (`all`)、Claude Code の WorktreeCreate / SessionStart / SessionEnd hook、git-wt の hook (作成時と削除時) から呼ばれる。Claude Code が symlink を実ファイルに置き換えても、次に呼ばれたときに実体へ合流させて張り直す (permissions の配列は和集合)。管理外の設定の取り込みは `project-settings.sh adopt <checkout>`
 - **sheldon**: プラグイン変更後は `sheldon lock` が必要
 - **mise**: ツール追加/変更後は `mise install` で反映
 - **textlint**: `agents/plugins/textlint/` の plugin。bootstrap が marketplace を登録して有効にし、依存は Claude Code が package-lock.json から入れる (ルールを追加したら lockfile も更新し、plugin.json の version を上げる)。Claude Code が書いた `.md` とソースコードのコメント (どちらも作業ディレクトリ内の変更箇所のみ)、`gh pr create/edit` のタイトル・本文、Linear / Notion の MCP ツールで送信する文書を hook で確認する。コメントは言い換えの規則 (`prh.yml`) だけを見る。文体の規則はコードコメントに合わないため。PR と MCP の hook は指摘があると実行を止める。誤検知のとき、PR は `<!-- textlint-disable -->` かコマンドに `TEXTLINT_SKIP=1` を付け、MCP は同じ内容のまま再実行すれば一度だけ通る

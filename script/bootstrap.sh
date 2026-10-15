@@ -174,6 +174,7 @@ link_claude_config() {
   # Claude Code フックスクリプト (ディレクトリは symlink にしない: nono など外部ツールが配置するファイルと共存させる)
   ensure_dir "$HOME/.claude/hooks"
   link_file "$ROOT/agents/hooks/worktree-create.sh" "$HOME/.claude/hooks/worktree-create.sh"
+  link_file "$ROOT/agents/hooks/project-settings.sh" "$HOME/.claude/hooks/project-settings.sh"
 }
 
 link_agent_global_docs() {
@@ -186,33 +187,45 @@ link_agent_global_docs() {
   link_file "$ROOT/agents/codex/global/AGENTS.md" "$HOME/.codex/AGENTS.md"
 }
 
+AGENT_PRIVATE_DIR="${AGENT_PRIVATE_DIR:-$HOME/src/github.com/wakwak3125/agent-private}"
+
+setup_agent_private() {
+  # org 指示とプロジェクトの Claude Code 設定は会社固有の情報を含むので、公開の dotfiles ではなく
+  # private リポジトリに置き、マシン間は git で揃える。手で運ぶとマシンごとに中身がずれるため
+  if [[ ! -d "$AGENT_PRIVATE_DIR/.git" ]]; then
+    if ! command -v ghq &>/dev/null || ! ghq get -p wakwak3125/agent-private; then
+      echo "==> WARN: could not clone wakwak3125/agent-private, skipping org docs and project settings" >&2
+    fi
+    return 0
+  fi
+  # 未 commit の変更 (「常に許可」で足された規則など) があるときは、取り込みを人に任せる
+  if [[ -z "$(git -C "$AGENT_PRIVATE_DIR" status --porcelain)" ]]; then
+    git -C "$AGENT_PRIVATE_DIR" pull --ff-only --quiet ||
+      echo "==> WARN: git pull failed in $AGENT_PRIVATE_DIR" >&2
+  else
+    echo "==> WARN: $AGENT_PRIVATE_DIR has uncommitted changes. Commit and push them to sync other machines" >&2
+  fi
+}
+
 link_agent_org_docs() {
   # Org 単位の agent docs。
-  #   agents/claude/org/<org>/CLAUDE.md -> ~/src/github.com/<org>/CLAUDE.md
-  #   agents/codex/org/<org>/AGENTS.md  -> ~/src/github.com/<org>/AGENTS.md
-  # agents/{claude,codex}/org/ は gitignore 対象 (会社固有情報を含むため)。
-  # ファイルがあるマシンでのみ symlink を張る。
-  local org_dir org
+  #   agent-private/org/<org>/CLAUDE.md -> ~/src/github.com/<org>/CLAUDE.md
+  #   agent-private/org/<org>/AGENTS.md -> ~/src/github.com/<org>/AGENTS.md
+  # その org のリポジトリを clone しているマシンでのみ symlink を張る。
+  local org_dir org name
 
-  if [[ -d "$ROOT/agents/claude/org" ]]; then
-    for org_dir in "$ROOT"/agents/claude/org/*/; do
-      [[ -d "$org_dir" ]] || continue
-      org="$(basename "$org_dir")"
-      if [[ -f "$org_dir/CLAUDE.md" && -d "$HOME/src/github.com/$org" ]]; then
-        link_file "$org_dir/CLAUDE.md" "$HOME/src/github.com/$org/CLAUDE.md"
-      fi
+  [[ -d "$AGENT_PRIVATE_DIR/org" ]] || return 0
+  for org_dir in "$AGENT_PRIVATE_DIR"/org/*/; do
+    org="$(basename "$org_dir")"
+    [[ -d "$HOME/src/github.com/$org" ]] || continue
+    for name in CLAUDE.md AGENTS.md; do
+      [[ -f "$org_dir$name" ]] && link_file "$org_dir$name" "$HOME/src/github.com/$org/$name"
     done
-  fi
+  done
+}
 
-  if [[ -d "$ROOT/agents/codex/org" ]]; then
-    for org_dir in "$ROOT"/agents/codex/org/*/; do
-      [[ -d "$org_dir" ]] || continue
-      org="$(basename "$org_dir")"
-      if [[ -f "$org_dir/AGENTS.md" && -d "$HOME/src/github.com/$org" ]]; then
-        link_file "$org_dir/AGENTS.md" "$HOME/src/github.com/$org/AGENTS.md"
-      fi
-    done
-  fi
+link_project_settings() {
+  bash "$ROOT/agents/hooks/project-settings.sh" all
 }
 
 merge_claude_settings() {
@@ -234,12 +247,15 @@ merge_claude_settings() {
   # WorktreeCreate フック、ccstatusline (mise shim 経由) のステータスライン、dotfiles の plugin をマージ。
   # textlint と guard の hook は plugin (agents/plugins/) に置いた。ここでは settings.json に登録するだけで、
   # plugin の導入と更新は install_claude_plugins が claude plugin で行う。
-  # 以前 settings.json に直接書いていた claude-hook.mjs の hook は、plugin と二重に動かないよう取り除く
-  jq --arg root "$ROOT" '
-      def ours: (.command // "") | contains("claude-hook.mjs");
+  # 以前 settings.json に直接書いていた claude-hook.mjs の hook は、plugin と二重に動かないよう取り除く。
+  # project-settings.sh の hook も一度取り除いてから足し直し、再実行で重複させない
+  jq --arg root "$ROOT" --arg ps '$HOME/.claude/hooks/project-settings.sh' '
+      def ours: (.command // "") | (contains("claude-hook.mjs") or contains("project-settings.sh"));
       def without_ours: map(.hooks |= ((. // []) | map(select(ours | not)))) | map(select(.hooks | length > 0));
       .hooks = ((.hooks // {}) | map_values(if type == "array" then without_ours else . end))
       | .hooks.WorktreeCreate = [{"hooks":[{"type":"command","command":"$HOME/.claude/hooks/worktree-create.sh"}]}]
+      | .hooks.SessionStart = ((.hooks.SessionStart // []) + [{"hooks":[{"type":"command","command":$ps}]}])
+      | .hooks.SessionEnd = ((.hooks.SessionEnd // []) + [{"hooks":[{"type":"command","command":$ps}]}])
       | .extraKnownMarketplaces.dotfiles = {"source": {"source": "directory", "path": $root}}
       | .enabledPlugins["textlint@dotfiles"] = true
       | .enabledPlugins["guard@dotfiles"] = true
@@ -378,7 +394,6 @@ run_step "Removed tmux switcher cleanup" cleanup_removed_tmux_switchers
 # ================================================
 run_step "Claude runtime config symlinks" link_claude_config
 run_step "Agent global docs symlinks" link_agent_global_docs
-run_step "Agent org docs symlinks" link_agent_org_docs
 run_step "Claude settings merge" merge_claude_settings
 
 # ================================================
@@ -391,6 +406,11 @@ export_tool_paths
 
 # ghq root (~/src) の作成と設定確認 (mise で ghq が入った後に実行する)
 run_step "ghq setup" setup_ghq
+
+# org 指示とプロジェクト設定の実体は private リポジトリにあるので、ghq が使えるようになってから張る
+run_step "Agent private repo" setup_agent_private
+run_step "Agent org docs symlinks" link_agent_org_docs
+run_step "Project settings links" link_project_settings
 
 # gh skill を使うため mise で gh が入った後に実行する
 run_step "Agent skill install" install_agent_skills
