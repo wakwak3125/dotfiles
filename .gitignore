@@ -13,7 +13,7 @@ nvim/nvim
 agents/skills/*/node_modules/
 agents/plugins/*/node_modules/
 agents/skills/sentry-cli/
-# org 単位の agent docs (会社固有情報を含むため。global は追跡する)
+# org 単位の agent docs の旧置き場。いまは wakwak3125/agent-private に置くが、移行前の手元のコピーを誤って commit しないよう残す
 agents/claude/org/
 agents/codex/org/
 # legacy paths before restructuring

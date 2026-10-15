@@ -28,4 +28,7 @@ fi
 mkdir -p "$(dirname "$DIR")"
 git -C "$GIT_ROOT" worktree add -b "$BRANCH" "$DIR" "$BASE" >&2
 
+# stdout は worktree のパスだけにする決まりなので、link の出力は stderr に寄せる
+"$HOME/.claude/hooks/project-settings.sh" link "$DIR" >&2 || true
+
 echo "$DIR"
