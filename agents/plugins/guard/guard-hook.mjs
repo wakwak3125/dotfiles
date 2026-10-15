@@ -2,7 +2,7 @@
 // CLAUDE.md の規約のうち、機械的に判定できるものを Claude Code hook で確認する。
 //   bash: PreToolUse (Bash)。git config --global、新しく作るブランチの名前、コミットメッセージを見て、規約に反していれば実行を止める
 //   sync: PostToolUse (Write|Edit)。agents/claude と agents/codex の対応する文書がずれたら知らせる
-//   stop: Stop。dotfiles で設定を変えたあとの sheldon lock と mise install、plugin の version 上げ忘れを拾う
+//   stop: Stop。dotfiles で設定を変えたあとの sheldon lock と mise install、plugin の version 上げ忘れ、textlint の lockfile に戻った bin を拾う
 // hook 自身の不具合で作業を止めないよう、判定に失敗したときは常に exit 0 で通す。
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync, statSync } from "node:fs";
@@ -329,6 +329,14 @@ function mtime(p) {
   }
 }
 
+function lockHasBin(p) {
+  try {
+    return Object.values(JSON.parse(readFileSync(p, "utf8")).packages ?? {}).some((pkg) => pkg.bin !== undefined);
+  } catch {
+    return false;
+  }
+}
+
 function changedFiles(root) {
   // 追加したばかりのファイルはディレクトリ 1 行にまとめられてしまうため、--untracked-files=all で 1 件ずつ出させる。
   // 未追跡でない行は行頭が空白で始まるので、git() ではなく空白を落とさない gitLines() で受ける
@@ -374,6 +382,12 @@ async function runStop(input) {
     if (!changed.includes(`agents/plugins/${name}/.claude-plugin/plugin.json`)) {
       lines.push(`guard: agents/plugins/${name} を変更しましたが .claude-plugin/plugin.json の version を上げていません。`);
     }
+  }
+
+  // lockfile に bin があると Claude Code の npm ci が node_modules/.bin に symlink を作り、Claude Desktop がその plugin を SSH 先へコピーしなくなる
+  const textlintLock = "agents/plugins/textlint/package-lock.json";
+  if (changed.includes(textlintLock) && lockHasBin(path.join(root, textlintLock))) {
+    lines.push(`guard: ${textlintLock} に bin が残っています。agents/plugins/textlint で npm run lock を実行してください。`);
   }
 
   if (lines.length > 0) block(lines);
