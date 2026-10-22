@@ -1,6 +1,5 @@
 [tools]
 bat = "latest"
-bun = "latest"
 fd = "latest"
 # gh: aqua backend は GitHub attestations 検証が不安定なため ubi backend を明示。
 "ubi:cli/cli[exe=gh]" = "latest"
