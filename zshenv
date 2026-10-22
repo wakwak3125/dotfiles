@@ -22,3 +22,9 @@ fi
 if [[ -d "$HOME/ap-store" ]]; then
   export AP_STORE="$HOME/ap-store"
 fi
+
+# macOS の /etc/ssl/cert.pem は OS の更新でしか新しくならず、失効した CA が残る。
+# mise や uv の Python など OpenSSL の既定の場所を読むツールに Homebrew の CA を使わせる
+if [[ "$OSTYPE" == darwin* && -f /opt/homebrew/etc/ca-certificates/cert.pem ]]; then
+  export SSL_CERT_FILE=/opt/homebrew/etc/ca-certificates/cert.pem
+fi
