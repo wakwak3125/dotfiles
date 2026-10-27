@@ -59,6 +59,24 @@ if is_wsl() then
       cache_enabled = 0,
     }
   end
+elseif vim.fn.has("mac") == 0 and vim.env.DISPLAY == nil and vim.env.WAYLAND_DISPLAY == nil then
+  -- xclip や wl-copy が入っていても DISPLAY がないと provider が見つからず yank が捨てられるため、OSC 52 で手元の端末へ送る
+  local osc52 = require("vim.ui.clipboard.osc52")
+  -- OSC 52 の読み出しは応答しない端末があり貼り付けが固まるため、貼り付けは nvim のレジスタから行う
+  local function paste()
+    return { vim.fn.split(vim.fn.getreg(""), "\n"), vim.fn.getregtype("") }
+  end
+  vim.g.clipboard = {
+    name = "osc52",
+    copy = {
+      ["+"] = osc52.copy("+"),
+      ["*"] = osc52.copy("*"),
+    },
+    paste = {
+      ["+"] = paste,
+      ["*"] = paste,
+    },
+  }
 end
 
 vim.opt.clipboard = "unnamedplus"
