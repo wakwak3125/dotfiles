@@ -1,0 +1,184 @@
+#!/usr/bin/env bash
+# security-check: 自宅サーバーのカーネルの更新状況と、外から届く経路をまとめて確認する
+#
+# マンションの LAN は他の住戸と共有で、グローバル IPv6 も付くため、ルーター越しの公開を前提にせず
+# サーバー側で何が届きうるかを見る
+#
+# 使い方:
+#   sudo security-check [CVE-ID ...]   CVE-ID を渡すと、動いているカーネルにその修正が入っているかも確認する
+#
+# 問題があれば終了コード 1 を返す。root でないと ufw と sshd の確認は飛ばす
+set -uo pipefail
+
+warns=0
+section() { printf '\n== %s ==\n' "$*"; }
+ok()   { printf '  [OK]   %s\n' "$*"; }
+warn() { printf '  [WARN] %s\n' "$*"; warns=$((warns + 1)); }
+info() { printf '  [--]   %s\n' "$*"; }
+is_root() { [ "$(id -u)" = 0 ]; }
+
+running=$(uname -r)
+# linux-image-* のバージョンは uname -r と書式が違う (7.0.0-31-generic と 7.0.0-31.31) ので dpkg から取る
+running_ver=$(dpkg-query -W -f='${Version}' "linux-image-$running" 2>/dev/null)
+# 署名済みイメージの source は linux-signed(-hwe-*) なので、CVE の表に載る名前に戻す
+kernel_src=$(dpkg-query -W -f='${source:Package}' "linux-image-$running" 2>/dev/null | sed 's/-signed//')
+codename=$(. /etc/os-release && echo "$VERSION_CODENAME")
+uplink=$(ip -4 route show default | awk '{print $5; exit}')
+
+check_kernel() {
+  section "カーネル"
+  info "動作中: $running ($running_ver, source: $kernel_src)"
+  local newest
+  newest=$(ls /boot/vmlinuz-* 2>/dev/null | sed 's|.*/vmlinuz-||' | sort -V | tail -1)
+  if [ -n "$newest" ] && [ "$newest" != "$running" ]; then
+    warn "新しいカーネル $newest が入っているが再起動していない"
+  else
+    ok "インストール済みの最新カーネルで動いている"
+  fi
+  [ -f /var/run/reboot-required ] && warn "reboot-required がある: $(sort -u /var/run/reboot-required.pkgs 2>/dev/null | xargs)"
+  local up
+  up=$(apt list --upgradable 2>/dev/null | grep -E '^linux-(image|generic|headers)' | cut -d' ' -f1,2)
+  if [ -n "$up" ]; then
+    warn "カーネルの更新が未適用:"
+    printf '         %s\n' $up
+  else
+    ok "未適用のカーネル更新はない (apt update 済みの情報で判定)"
+  fi
+}
+
+check_cve() {
+  local cve=$1 st status fixed
+  section "$cve ($kernel_src / $codename)"
+  st=$(curl -fsS --max-time 10 "https://ubuntu.com/security/cves/$cve.json" 2>/dev/null |
+    jq -r --arg p "$kernel_src" --arg c "$codename" \
+      '.packages[] | select(.name==$p) | .statuses[] | select(.release_codename==$c) | "\(.status)\t\(.description)"' 2>/dev/null)
+  if [ -z "$st" ]; then
+    warn "Ubuntu の CVE 情報を取得できない、または $kernel_src の $codename 向けの記載がない"
+    return
+  fi
+  IFS=$'\t' read -r status fixed <<<"$st"
+  case "$status" in
+    not-affected) ok "影響なし" ;;
+    released)
+      if dpkg --compare-versions "$running_ver" ge "$fixed"; then
+        ok "修正済み ($fixed 以上で動作中)"
+      else
+        warn "修正版 $fixed が出ている。更新して再起動する"
+      fi ;;
+    pending|needed|deferred) warn "未修正 (status: $status${fixed:+, 予定: $fixed})。外から届くポートを絞って待つ" ;;
+    *) warn "status: $status $fixed" ;;
+  esac
+}
+
+check_network() {
+  section "ネットワーク ($uplink)"
+  local cidr prefix neigh v6
+  cidr=$(ip -4 -br addr show dev "$uplink" | awk '{print $3}')
+  prefix=${cidr#*/}
+  neigh=$(ip neigh show dev "$uplink" | grep -cvE 'FAILED|INCOMPLETE')
+  # 1 住戸の LAN なら /24 以下で機器も十数台に収まる。それを超えるなら建物共有の LAN とみなす
+  if [ "${prefix:-24}" -lt 24 ] || [ "$neigh" -gt 20 ]; then
+    warn "LAN が広い ($cidr, 近隣 $neigh 台)。他の住戸から 0.0.0.0 待ち受けのポートへ届く"
+  else
+    ok "LAN は $cidr, 近隣 $neigh 台"
+  fi
+  v6=$(ip -6 -br addr show dev "$uplink" scope global | awk '{$1=$2=""; print}' | xargs)
+  if [ -n "$v6" ]; then
+    warn "グローバル IPv6 がある ($v6)。[::] 待ち受けのポートはルーターの IPv6 フィルタ次第でインターネットから届く"
+  else
+    ok "グローバル IPv6 はない"
+  fi
+}
+
+check_listeners() {
+  section "外から届くアドレスで待ち受けているポート"
+  local found=0 proto addr proc
+  while read -r proto addr proc; do
+    case "$addr" in
+      127.*|\[::1\]*|*%lo:*|*%tailscale0:*|100.*|\[fd7a:115c:a1e0:*) continue ;;
+    esac
+    # UDP は mDNS や Tailscale の WireGuard など常に開いているものが多く、SYN を受ける TCP ほど危険でないため警告にしない
+    if [ "$proto" = udp ]; then
+      info "$proto $addr $proc"
+      continue
+    fi
+    found=1
+    warn "$proto $addr ${proc:-(プロセス不明: root で実行すると表示される)}"
+  done < <(ss -tulnpH | awk '{print $1, $5, $7}')
+  [ "$found" = 0 ] && ok "loopback と Tailscale 以外では TCP を待ち受けていない"
+}
+
+check_docker() {
+  section "Docker の公開ポート"
+  if ! command -v docker >/dev/null || ! docker info >/dev/null 2>&1; then
+    info "docker を使えないので飛ばす"
+    return
+  fi
+  local found=0 name ports
+  while IFS=$'\t' read -r name ports; do
+    case "$ports" in *0.0.0.0:*|*'[::]:'*|*':::'*) ;; *) continue ;; esac
+    found=1
+    # Docker は iptables に直接 DNAT を入れるので、ufw の deny を書いてもこのポートには効かない
+    warn "$name: $ports (ufw を素通りする。compose で 127.0.0.1: か Tailscale の IP に bind する)"
+  done < <(docker ps --format '{{.Names}}\t{{.Ports}}')
+  [ "$found" = 0 ] && ok "全インターフェースへ公開しているコンテナはない"
+}
+
+check_ufw() {
+  section "ufw"
+  if ! is_root; then info "root でないので飛ばす"; return; fi
+  local st
+  st=$(ufw status verbose)
+  if ! grep -q '^Status: active' <<<"$st"; then
+    warn "ufw が無効"
+    return
+  fi
+  if grep -q 'Default: deny (incoming)' <<<"$st"; then
+    ok "受信の既定は deny"
+  else
+    warn "受信の既定が deny でない: $(grep '^Default:' <<<"$st")"
+  fi
+  # Tailscale 以外の経路からの ALLOW は、共有 LAN と IPv6 経由で届く入口になる
+  # パイプの右に while を置くとサブシェルになり warns の加算が消えるので、プロセス置換で読む
+  local line
+  while read -r line; do
+    case "$line" in
+      *'on tailscale0'*) info "$line" ;;
+      *) warn "tailscale0 以外への許可: $line" ;;
+    esac
+  done < <(grep -E 'ALLOW IN' <<<"$st")
+}
+
+check_sshd() {
+  section "sshd"
+  if ! is_root; then info "root でないので飛ばす"; return; fi
+  local cfg
+  cfg=$(sshd -T 2>/dev/null) || { info "sshd -T を実行できない"; return; }
+  local key val
+  for key in passwordauthentication kbdinteractiveauthentication permitrootlogin; do
+    val=$(awk -v k="$key" '$1==k {print $2}' <<<"$cfg")
+    case "$key:$val" in
+      permitrootlogin:no|permitrootlogin:prohibit-password|*:no) ok "$key $val" ;;
+      *) warn "$key $val" ;;
+    esac
+  done
+}
+
+case "${1:-}" in
+  -h|--help) sed -n '2,10p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+esac
+
+check_kernel
+for cve in "$@"; do check_cve "$cve"; done
+check_network
+check_listeners
+check_docker
+check_ufw
+check_sshd
+
+printf '\n'
+if [ "$warns" -gt 0 ]; then
+  echo "警告 $warns 件"
+  exit 1
+fi
+echo "問題なし"

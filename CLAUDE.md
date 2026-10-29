@@ -40,7 +40,7 @@ dotfiles/
 ├── nvim/init.lua     # Neovim 設定 (lazy.nvim)
 ├── pbcopy            # pbcopy polyfill (Linux/WSL)
 ├── pbpaste           # pbpaste polyfill (Linux/WSL)
-├── server/           # 自宅サーバー用 (server-profile: eco/stream/performance 切替 CLI + systemd unit、gui: GUI の起動・停止 CLI。install.sh で /usr/local/sbin 等へコピー)
+├── server/           # 自宅サーバー用 (server-profile: eco/stream/performance 切替 CLI + systemd unit、gui: GUI の起動・停止 CLI、security-check: カーネル更新と外から届くポートの確認 CLI。install.sh で /usr/local/sbin 等へコピー)
 ├── script/           # インストール・ユーティリティスクリプト
 │   ├── bootstrap.sh  # 初期セットアップ (symlink 作成、gh skill install 含む)
 │   ├── claude-status # Claude Code ダッシュボード
