@@ -342,13 +342,21 @@ cleanup_legacy_wt() {
 link_hunk_skill() {
   # hunk 同梱の review skill を Claude Code の個人 skill として登録する。
   # `hunk skill path` は実バージョン付きパスを返すため、mise の latest symlink 配下を
-  # 優先して hunk アップグレード後もリンク切れしないようにする
-  local hunk_bin skill_dir
-  local latest_dir="$HOME/.local/share/mise/installs/npm-hunkdiff/latest/lib/node_modules/hunkdiff/skills/hunk-review"
+  # 優先して hunk アップグレード後もリンク切れしないようにする。
+  # 導入先は mise が使うインストーラーで変わるため、どちらの配置も確かめる
+  local hunk_bin skill_dir candidate
+  local latest_root="$HOME/.local/share/mise/installs/npm-hunkdiff/latest"
 
-  if [[ -f "$latest_dir/SKILL.md" ]]; then
-    skill_dir="$latest_dir"
-  else
+  for candidate in \
+    "$latest_root/node_modules/hunkdiff/skills/hunk-review" \
+    "$latest_root/lib/node_modules/hunkdiff/skills/hunk-review"; do
+    if [[ -f "$candidate/SKILL.md" ]]; then
+      skill_dir="$candidate"
+      break
+    fi
+  done
+
+  if [[ -z "${skill_dir:-}" ]]; then
     hunk_bin="$(command -v hunk || true)"
     if [[ -z "$hunk_bin" ]]; then
       echo "==> WARN: hunk not found, skipping hunk-review skill link" >&2
