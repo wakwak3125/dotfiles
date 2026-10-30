@@ -4,6 +4,7 @@ set -euo pipefail
 cd "$(dirname "$0")"
 sudo install -m 0755 server-profile /usr/local/sbin/server-profile
 sudo install -m 0755 gui /usr/local/sbin/gui
+sudo install -m 0755 security-check /usr/local/sbin/security-check
 sudo install -d -m 0755 /etc/server-profiles
 for p in profiles/*; do sudo install -m 0644 "$p" /etc/server-profiles/; done
 sudo install -m 0644 systemd/server-profile.service /etc/systemd/system/
