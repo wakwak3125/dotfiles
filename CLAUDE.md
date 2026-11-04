@@ -18,7 +18,7 @@ dotfiles/
 │   ├── skills/       # 個人 skills (`gh skill` で Claude Code / Codex に install)
 │   │   ├── manifest.tsv # skill ごとの install 先 agent 定義
 │   │   └── external.tsv # 外部 repo 由来の skill (skills.sh = `npx skills add` で導入)
-│   ├── agents/       # Claude Code subagent 定義 (spec-planner-*, japan-{ehr,receipt}-* 等)
+│   ├── agents/       # Claude Code subagent 定義 (spec-planner-*, japan-{ehr,receipt}-* 等。~/.claude/agents へファイル単位で symlink)
 │   ├── plugins/      # Claude Code plugin (textlint: 日本語の lint hook / guard: 規約の確認 hook / deep-loop: 夜間の長時間の調査と設計)。直下の .claude-plugin/marketplace.json で登録
 │   └── hooks/        # 個人 hooks (worktree-create.sh, project-settings.sh 等) ※ファイル単位で symlink
 ├── config/           # XDG_CONFIG_HOME 配下の設定
@@ -45,6 +45,7 @@ dotfiles/
 │   ├── bootstrap.sh  # 初期セットアップ (symlink 作成、gh skill install 含む)
 │   ├── claude-status # Claude Code ダッシュボード
 │   ├── install-agent-skills.sh # `gh skill` による個人 skills インストール
+│   ├── link-claude-agents.sh # dotfiles と agent-private の subagent 定義を ~/.claude/agents に張る
 │   ├── install-neovim.sh    # Neovim インストーラ
 │   ├── macos.sh             # macOS 専用セットアップ (Homebrew, GUI app config 等)
 │   ├── linux.sh             # Ubuntu (ネイティブ/WSL2) 専用セットアップ (apt, sheldon, zsh へ chsh, デスクトップ時は GUI app config/GNOME 設定)
@@ -88,7 +89,7 @@ dotfiles/
 - **OS 分岐**: `.zshrc` や `bootstrap.sh` に macOS/Linux の条件分岐あり。片方だけ壊さないよう注意
 - **symlink**: 設定ファイルと Claude Code 用 agents/hooks は symlink で管理。skills は `gh skill` でコピーインストールする
 - **agent docs**: `agents/claude/global` (CLAUDE.md) と `agents/codex/global` (AGENTS.md) は同一内容を保つ (エージェント固有指示が必要なときだけ分岐)。bootstrap で symlink される
-- **agent-private**: 会社固有の情報を含む org 指示 (`org/<org>/{CLAUDE,AGENTS}.md`) とプロジェクトの Claude Code 設定 (`projects/<org>/<repo>/settings.local.json`) は private リポジトリ `wakwak3125/agent-private` (`~/src/github.com/wakwak3125/agent-private`) に置き、マシン間は git で揃える。bootstrap が ghq で clone して symlink を張る。プロジェクト設定の配布は `agents/hooks/project-settings.sh` が担い、bootstrap (`all`)、Claude Code の WorktreeCreate / SessionStart / SessionEnd hook、git-wt の hook (作成時と削除時) から呼ばれる。Claude Code が symlink を実ファイルに置き換えても、次に呼ばれたときに実体へ合流させて張り直す (permissions の配列は和集合)。管理外の設定の取り込みは `project-settings.sh adopt <checkout>`
+- **agent-private**: 会社固有の情報を含む org 指示 (`org/<org>/{CLAUDE,AGENTS}.md`)、org の subagent 定義 (`org/<org>/agents/*.md`)、プロジェクトの Claude Code 設定 (`projects/<org>/<repo>/settings.local.json`) は private リポジトリ `wakwak3125/agent-private` (`~/src/github.com/wakwak3125/agent-private`) に置き、マシン間は git で揃える。bootstrap が ghq で clone して symlink を張る。subagent 定義は `script/link-claude-agents.sh` が `~/.claude/agents` にファイル単位で張る。足したり消したりしたら再実行する。プロジェクト設定の配布は `agents/hooks/project-settings.sh` が担い、bootstrap (`all`)、Claude Code の WorktreeCreate / SessionStart / SessionEnd hook、git-wt の hook (作成時と削除時) から呼ばれる。Claude Code が symlink を実ファイルに置き換えても、次に呼ばれたときに実体へ合流させて張り直す (permissions の配列は和集合)。管理外の設定の取り込みは `project-settings.sh adopt <checkout>`
 - **sheldon**: プラグイン変更後は `sheldon lock` が必要
 - **mise**: ツール追加/変更後は `mise install` で反映
 - **textlint**: `agents/plugins/textlint/` の plugin。bootstrap が marketplace を登録して有効にし、依存は Claude Code が package-lock.json から入れる (ルールを追加したら `npm run lock` で lockfile を作り直し、plugin.json の version を上げる)。`npm run lock` は lockfile から bin を取り除く。bin があると `node_modules/.bin` に symlink ができ、Claude Desktop が SSH 先へ plugin をコピーせず無効にするため。Claude Code が書いた `.md` とソースコードのコメント (どちらも作業ディレクトリ内の変更箇所のみ)、`gh pr create/edit` のタイトル・本文、Linear / Notion の MCP ツールで送信する文書を hook で確認する。コメントは言い換えの規則 (`prh.yml`) だけを見る。文体の規則はコードコメントに合わないため。PR と MCP の hook は指摘があると実行を止める。誤検知のとき、PR は `<!-- textlint-disable -->` かコマンドに `TEXTLINT_SKIP=1` を付け、MCP は同じ内容のまま再実行すれば一度だけ通る
