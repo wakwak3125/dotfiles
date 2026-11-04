@@ -166,10 +166,8 @@ cleanup_removed_tmux_switchers() {
 link_claude_config() {
   ensure_dir "$HOME/.claude"
 
-  if [[ ! -L "$HOME/.claude/agents" ]]; then
-    rm -rf "$HOME/.claude/agents"
-  fi
-  link_dir "$ROOT/agents/agents" "$HOME/.claude/agents"
+  # agent-private を取り込む前に一度張る。後の手順が失敗しても dotfiles の subagent は使えるようにするため
+  bash "$ROOT/script/link-claude-agents.sh"
 
   # Claude Code フックスクリプト (ディレクトリは symlink にしない: nono など外部ツールが配置するファイルと共存させる)
   ensure_dir "$HOME/.claude/hooks"
@@ -418,6 +416,7 @@ run_step "ghq setup" setup_ghq
 # org 指示とプロジェクト設定の実体は private リポジトリにあるので、ghq が使えるようになってから張る
 run_step "Agent private repo" setup_agent_private
 run_step "Agent org docs symlinks" link_agent_org_docs
+run_step "Claude agents links" bash "$ROOT/script/link-claude-agents.sh"
 run_step "Project settings links" link_project_settings
 
 # gh skill を使うため mise で gh が入った後に実行する
