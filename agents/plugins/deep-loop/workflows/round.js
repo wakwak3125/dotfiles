@@ -305,7 +305,7 @@ function integratePrompt(done, failed) {
     '- Failed tasks leave their questions open. Add raised questions only if they matter to the brief; the brief is the ceiling.',
     '- Carry over everything still valid. Only the notes, checks, verdicts, current state and the brief\'s "## Answers" section are evidence; add no knowledge of your own. Close a question that "## Answers" settles, citing "brief: Answers". When the document grows long, merge related lines instead of dropping them.',
     '- progress counts what is new this round: findings, candidates, decisions, questions resolved, defects confirmed or refuted. suggest_done is true when no open question that matters to the deliverable remains.',
-    '- summary is one line of at most 200 characters, and resolved_questions lists question ids only (such as "Q3"). The details belong in the state document; the summary is what the orchestrator keeps from this round.',
+    '- summary is a single line: the orchestrator keeps it from this round and deep-loop status prints it beside the round number. The details belong in the state document. resolved_questions lists question ids only (such as "Q3").',
     '- Do not start subagents.',
     '',
     '## Brief',

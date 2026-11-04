@@ -24,11 +24,11 @@ description: deep-loop の作業ディレクトリを受け取り、1 ラウン�
 
    | 役 | model | effort |
    | -- | -- | -- |
-   | planner | opus | xhigh |
+   | planner | opus | high |
    | worker | sonnet | medium |
    | verifier | opus | high |
    | integrator | opus | high |
-   | writer | opus | xhigh |
+   | writer | opus | high |
 
 4. `DIR/journal.jsonl` があれば読み、`"status": "ok"` の行の数を完了したラウンド数にする。
    `"status"` が `failed` か `done` の行があれば、ラウンドはもう打ち切っているので、残りのラウンドは回さずに成果物へ進む。
@@ -53,7 +53,7 @@ description: deep-loop の作業ディレクトリを受け取り、1 ラウン�
      "roundsDir": "DIR/rounds",
      "stateMaxLines": 300,
      "models": { "planner": "opus", "worker": "sonnet", "verifier": "opus", "integrator": "opus" },
-     "efforts": { "planner": "xhigh", "worker": "medium", "verifier": "high", "integrator": "high" }
+     "efforts": { "planner": "high", "worker": "medium", "verifier": "high", "integrator": "high" }
    }
    ```
    パスはすべて絶対パスで渡す。Workflow の完了を待ってから次に進む。
@@ -85,7 +85,7 @@ description: deep-loop の作業ディレクトリを受け取り、1 ラウン�
   "templatesDir": "PLUGIN/templates",
   "reportPath": "DIR/report.md",
   "models": { "writer": "opus" },
-  "efforts": { "writer": "xhigh" }
+  "efforts": { "writer": "high" }
 }
 ```
 
