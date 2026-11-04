@@ -7,7 +7,7 @@ Follow the structure below. Take positions the evidence supports and consider th
 <BLUF paragraph: the key finding first, then significance and essential context. The reader can stop here.>
 
 ## <signpost header that states a specific insight>
-<dense paragraphs with **bold key facts** and inline citations>
+<dense paragraphs with inline citations; emphasise only the few facts the conclusion turns on>
 <!-- three to five signpost sections -->
 
 ## Open questions

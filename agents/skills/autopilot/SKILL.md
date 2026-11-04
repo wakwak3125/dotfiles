@@ -38,7 +38,7 @@ description: >-
 
 1. **メインは context を太らせない。** 拾ったタスクの実体 (調査・実装・検証・PR・CI 対応など) は、すべて *タスク専用サブエージェント* の中で完結させる。メインはサブエージェントの結果サマリだけを受け取る。
 2. **検出 1 件 = サブエージェント 1 体。** 新しく条件を満たす対象を検出したら、必ず新しい Agent を起動する。既存サブエージェントの使い回しはしない。
-3. **隔離は必要なときだけ。** コード変更を伴うアクション (実装・修正) のサブエージェントは `isolation: "worktree"` + `run_in_background: true` で起動し、並行してもブランチ・作業ツリーが衝突しないようにする (ワクさんの worktree ベース開発に揃える)。調査・レビュー・通知のみでファイルを書き換えないアクションでは worktree 隔離は不要 (`run_in_background: true` だけでよい)。アクションの性質に応じて選ぶ。
+3. **隔離は必要なときだけ。** コード変更を伴うアクション (実装・修正) のサブエージェントは `isolation: "worktree"` + `run_in_background: true` で起動し、並行してもブランチ・作業ツリーが衝突しないようにする (worktree ベース開発に揃える)。調査・レビュー・通知のみでファイルを書き換えないアクションでは worktree 隔離は不要 (`run_in_background: true` だけでよい)。アクションの性質に応じて選ぶ。
 4. **不可逆操作はしない。** マージ・リリース・本番反映・外部への破壊的変更はサブエージェントにさせない。その手前 (例: コード実装なら「マージ可能状態」、調査なら「報告まで」) で停止し、最終操作はユーザーの承認を待つ。
 5. **セッション内ループ。** ポーリングは `ScheduleWakeup` で自己ペース。セッションを閉じたら止まる (クラウド常駐が要るなら `/schedule` 系を別途検討)。
 6. **状態はファイルに永続化。** 各対象の処理状態は `~/.claude/autopilot/<slug>.json` に書き出す (下記「状態ファイル」)。台帳をメモリだけに持たず、`ScheduleWakeup` 再入時もセッション再開時もファイルから復元する。
@@ -52,7 +52,7 @@ description: >-
 引数 `<監視する内容>` を解析し、**監視仕様 (watch spec)** を組み立てる:
 
 - **トリガー / 対象ソース** — 何を、どの手段で観測するか。ソースに応じて取得手段を選ぶ:
-  - **Linear** → `mcp__claude_ai_Linear__list_issues` / `get_issue` (assignee・state・親チケットの children・label で絞る。"自分" は `list_users` で特定)
+  - **Linear** → `mcp__claude_ai_Linear__list_issues` / `get_issue` (assignee・state・親チケットの children・label で絞る。"自分" は assignee に `"me"` を渡す)
   - **GitHub** → `gh` CLI / `gh api` (PR・Issue 一覧、レビュー状態、`gh pr checks`)
   - **Sentry** → `sentry-cli` スキル
   - **Slack** → Slack 検索ツール (メンション・キーワード・チャンネル)
@@ -99,8 +99,7 @@ description: >-
 アクション未指定で対象がコード実装タスクの場合、サブエージェントに渡すアクションはこれ:
 
 ```
-1. <対象チケット> を実装する
-   (Linear からチケット本文・受け入れ条件を取得 → 計画 → 実装 → 型/ビルド/テスト/lint → レビュー → commit)。
+1. <対象チケット> を実装する。Linear からチケット本文と受け入れ条件を取得し、型検査・ビルド・テスト・lint が通る状態で commit する。
 2. dev-workflow:create-pr スキルで PR を作成する (PR タイトルは日本語、Linear チケットとリンク)。
 3. CI を監視: `gh pr checks <PR>` で確認し、失敗は原因特定して修正・push、green になるまで対応。
    レビューコメントが付いたら対応して push (review-pr のセルフレビューも活用可)。
@@ -127,7 +126,7 @@ description: >-
 - key: <一意キー>
 - status: done | ready_to_merge | blocked | failed
 - artifact: <PR URL / 作成したチケット / 報告先 など、なければ「なし」>
-- summary: 何をしたか 1〜3 行
+- summary: 何をしたか
 - blockers: 停止した場合の理由・必要な判断 (なければ空)
 ```
 

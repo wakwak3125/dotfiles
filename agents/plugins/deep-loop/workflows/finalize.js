@@ -1,6 +1,6 @@
 export const meta = {
   name: 'deep-loop-finalize',
-  description: 'deep-loop の最終の成果物を、state と各ラウンドのノートと照合結果から書く',
+  description: 'deep-loop の最終の成果物を、state と各ラウンドのノートと照合結果から書く（内部用）。deep-loop:run skill が args を渡して呼ぶもので、直接は呼ばない',
   phases: [{ title: 'Write', detail: '最終の成果物' }],
 }
 

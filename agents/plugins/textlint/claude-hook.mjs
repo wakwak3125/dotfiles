@@ -375,7 +375,7 @@ function linearPatchTargets(patch) {
 }
 
 // ツール名の末尾 (mcp__<server>__<tool> の <tool>) ごとに、送信する文書の項目を取り出す。
-// ツールを増やしたら bootstrap.sh の mcp_matcher にも加える (hook はそこに一致したツールでしか起動しない)。
+// ツールを増やしたら hooks/hooks.json の PreToolUse の matcher にも加える (hook はそこに一致したツールでしか起動しない)。
 // データベース配下の Notion ページはタイトルのプロパティ名が Name などになるため、そのタイトルは確認できない
 const MCP_TARGETS = {
   save_issue: (i) => [
