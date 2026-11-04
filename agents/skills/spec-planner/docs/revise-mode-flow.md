@@ -55,7 +55,9 @@ prompt 固有事項: 「対象セクションだけを Edit。章構成の大幅
 ## ステップ 4: 最終 critic（単発・Opus・厚めに熟考）
 
 - 目的: 改訂完了後の最終確認。既存成果物全体と改訂差分の整合を厚めに見る
-- prompt 固有事項: 「改訂箇所を中心に、要求網羅・整合性・回帰リスク・非機能・過去 Revision との整合・既存 open-issues との矛盾・**ステークホルダー読解性**（`requirements.md` の技術用語混入チェック）の 7 軸を確認。Grep で cross-file の用語・ID・テーブル名整合性を検証。severity タグ必須」
+- prompt 固有事項:
+  - 「改訂箇所を中心に次の 7 軸を確認する: 要求網羅・整合性・回帰リスク・非機能・過去 Revision との整合・既存 open-issues に反しないか・**ステークホルダー読解性**（`requirements.md` の技術用語混入チェック）」
+  - 「Grep で cross-file の用語・ID・テーブル名整合性を検証する。severity タグ必須」
 - 書き込み: `critic-findings.md` の `## Round (revise-R{N}, final)` セクション
 - 受け入れ基準: 7 軸それぞれに最低 1 件の検討記録（指摘なしでも「観点 X: 問題なし」を 1 行）
 

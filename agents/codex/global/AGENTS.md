@@ -7,7 +7,7 @@ CLAUDE.md (Claude Code) と AGENTS.md (Codex) は同一内容を保つこと。�
 
 - 応答は日本語。コード・識別子は英語。コードコメントは日本語。
 - コミットメッセージは日本語、conventional commits スタイルで書く
-- 簡潔で実用的な回答を優先する。冗長な説明は不要
+- 回答は簡潔で実用的にする
 - コード変更時は既存のコードスタイル・パターンに従う
 - Linear / Notion / 社内ブログなど日本語の設計ドキュメント・技術文書を書く/推敲するときは、必ず japanese-tech-writing skill を使うこと
 

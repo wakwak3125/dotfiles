@@ -72,7 +72,10 @@
 
 ## 追加項目（10 件必須項目に加えて毎回含める）
 
-1. **MTG 議事優先**: 「`<WORKDIR>/meeting-decisions.md` を `## Decisions Timeline` 末尾から逆順で必ず Read する。`base:` 文書と `meeting-decisions.md` が矛盾する場合は **MTG 決定を優先**する。base は土台、MTG は最新の合意。`## Ad-hoc Instructions`（ユーザーの直近の指示）と MTG 決定が矛盾する場合は指示に従い、食い違いを `open-issues.md` に記録する」
+1. **MTG 議事の扱い**:
+   - 「`<WORKDIR>/meeting-decisions.md` を `## Decisions Timeline` 末尾から逆順で必ず Read する」
+   - 「`base:` 文書と `meeting-decisions.md` が矛盾する場合は **MTG 決定を優先**する。base は土台、MTG は最新の合意」
+   - 「`## Ad-hoc Instructions`（ユーザーの直近の指示）と MTG 決定が矛盾する場合は指示に従い、食い違いを `open-issues.md` に記録する」
 2. **議事の根拠付与**: 「設計判断に MTG 決定が影響する場合、`design.md` / `data-model.md` の該当箇所に `MTG-<YYYY-MM-DD>` の根拠タグを残す（散文の中に 1 箇所付ければよい。乱発しない）」
 3. **設計書本文は『最新の確定版』として書く**:
    - `requirements.md` / `design.md` / `data-model.md` / `requirements-mapping.md` / `usecases.md` / `open-issues.md` の本文に、**過去 Revision との比較・変更経緯・以前の判断への言及を一切書かない**
