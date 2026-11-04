@@ -1,6 +1,6 @@
 export const meta = {
   name: 'deep-loop-round',
-  description: 'deep-loop の 1 ラウンド: 未解決の問いから課題を立て、作業役を並列に走らせ、影響の大きい知見を反証し、state を書き直す',
+  description: 'deep-loop の 1 ラウンド（内部用）: 未解決の問いから課題を立て、作業役を並列に走らせ、影響の大きい知見を反証し、state を書き直す。deep-loop:run skill が args を渡して呼ぶもので、直接は呼ばない',
   phases: [
     { title: 'Plan', detail: '未解決の問いから課題を立てる' },
     { title: 'Work', detail: '課題ごとの作業役' },
@@ -18,7 +18,7 @@ const R = 'r' + String(A.round).padStart(2, '0')
 const roundDir = A.roundsDir + '/' + R
 
 const EVIDENCE_RULES = [
-  '- Never fabricate. Do not speculate. Every factual claim needs a source and a verbatim quote from it. A claim without a source is not a finding: record it as a gap.',
+  '- Every factual claim needs a source and a verbatim quote from it. A claim without a source is not a finding: record it as a gap, or as an inference marked as such.',
   '- A source is a web page URL or an absolute file path (code in the repositories, or a file you saved in your scratch_dir).',
   '- Copy quotes character for character from the source, in its language. Never translate or paraphrase a quote. Keep each quote short (one or two sentences, or a few lines of code); join omitted parts with "...".',
   '- Every time you write claims_path, a hook checks each quote against its source by string matching and tells you which ones failed. Fix or drop failed claims and rewrite the file. Claims whose quote is not found never become findings.',
@@ -38,7 +38,7 @@ const WORKER_FILES = [
   '- summary: two or three sentences on what you established.',
   '- answered: the question ids from the task that you answered, each with a one-line answer. Leave out questions you could not settle.',
   '- raised_questions: new questions that matter to the brief and that you could not settle (may be empty).',
-  '- high_impact: the findings the final answer would depend on (key facts, design blockers, suspected defects), at most eight, each with a short id, a one-sentence statement and where the evidence is. A separate reviewer will try to refute each one.',
+  '- high_impact: the findings the final answer would depend on (key facts, design blockers, suspected defects), at most eight, each with a short id, a one-sentence statement and where the evidence is (URL, or absolute path and line), so each can be checked on its own.',
 ].join('\n')
 
 const WORKER_ROLES = {
@@ -47,11 +47,7 @@ const WORKER_ROLES = {
     'You establish the facts for one narrow task. Other workers cover adjacent tasks in parallel, so stay within your scope. Nobody will research further on your behalf: your notes must be self-contained and well sourced.',
     '',
     '## How to research',
-    '1. Reflect on which gaps remain for your objective and key questions.',
-    '2. Search: web search with short queries (under five words), or grep and glob in the repositories.',
-    '3. Read the full page or file behind promising results. Snippets are easy to take out of context.',
-    '4. Repeat until the key questions are answered with sourced findings, you stop finding new information, or you reach about 20 tool calls.',
-    'Never repeat the exact same query. Run searches and reads in parallel where you can. For recent topics, trust current sources over your training data.',
+    'Read the full page or file behind a promising result before you cite it; snippets are easy to take out of context. Stop when the key questions are answered with sourced findings or further searching stops turning up new information. Run searches and reads in parallel where you can. For recent topics, trust current sources over your training data.',
     '',
     '## Evaluating sources',
     'Ask whether a statement is confirmed fact or speculation, whether the source is primary (official documentation, specifications, source code, papers) or an aggregator, and whether it shows warning signs (nameless sources, vague qualifiers). When information is sparse or unreliable, say so.',
@@ -66,7 +62,6 @@ const WORKER_ROLES = {
     '## How to work',
     '- Read the code and documents your design touches before deciding. Ground every statement about existing code, services or libraries in a claim with a verbatim quote.',
     '- The brief is the ceiling: never add requirements of your own. Prefer the smallest design that meets every requirement, and follow the conventions of the existing code.',
-    '- About 25 tool calls at most.',
     '',
     '## Notes format',
     '# <slug>; ## Summary (three to five sentences); ## How it meets each requirement; ## Key decisions (decision, why, what it depends on); ## Steps (for a refactoring plan: ordered, each independently shippable, with its risk); ## What it gives up; ## Open questions.',
@@ -92,8 +87,7 @@ const WORKER_ROLES = {
     '## How to hunt',
     '- Read the code in scope end to end, then follow its callers and callees across module boundaries. Use distinct lenses: error and edge paths, concurrency and ordering, boundaries and units, resource lifetime, trust boundaries, assumptions that other code relies on.',
     '- For each candidate, write the exact location (absolute path and line), quote the code, and give a concrete trigger: the input or sequence of events, what happens, and what should happen. If you can demonstrate it with an existing test or a script in scratch_dir without touching the repository, do so and record the command and output.',
-    '- Every candidate goes into high_impact; a reviewer will try to refute each one. Do not inflate severity.',
-    '- About 30 tool calls at most.',
+    '- Put every candidate in high_impact, most severe first, each with its location and trigger; the limit of eight does not apply to defect candidates. Do not inflate severity.',
     '',
     '## Notes format',
     '# <slug>; ## Scope covered (what you read, so later rounds know what is done); ## Candidates, each "### <severity>: <title>" with Location, Code, Trigger, Expected vs actual, Confidence; ## Areas not covered.',
@@ -161,10 +155,10 @@ const VERDICTS_SCHEMA = {
         properties: {
           id: { type: 'string' },
           verdict: { type: 'string', enum: ['confirmed', 'refuted', 'uncertain'] },
-          reasoning: { type: 'string' },
+          explanation: { type: 'string' },
           evidence: { type: 'string' },
         },
-        required: ['id', 'verdict', 'reasoning', 'evidence'],
+        required: ['id', 'verdict', 'explanation', 'evidence'],
       },
     },
   },
@@ -189,7 +183,7 @@ function planPrompt() {
     'You plan round ' + A.round + ' of at most ' + A.maxRounds + ' of a long-running effort. The effort may be research, a pre-implementation design, a refactoring investigation, a hunt for latent defects, or a mix, as the brief says. You do not do the work yourself.',
     '',
     '## Input',
-    '- The brief (below) was written by a human. It never changes between rounds and it is the ceiling: never add requirements.',
+    '- The brief (below) was written by a human and is the ceiling: never add requirements. A "## Answers" section at its end, when present, holds a human\'s answers to open questions; treat the questions it settles as closed.',
     '- The state document at ' + A.statePath + ' holds the open questions (with ids such as Q3), resolved questions, findings, candidates and decisions, contradictions and dead ends. Read it first. It does not exist on round 1.',
     '- Earlier rounds: ' + (A.previous.length === 0 ? 'none' : A.previous.join(' | ')),
     '- Earlier rounds\' notes live under ' + A.roundsDir + '/<round>/<slug>.md. Use absolute paths in read_first.',
@@ -269,7 +263,7 @@ function verifyPrompt(task, work) {
     '- For a design blocker or plan risk: check whether the brief actually requires what the finding says is missed.',
     '- Judge each finding on its own evidence; do not let one verdict carry over to another.',
     '- If you cannot establish a finding, answer refuted. Answer uncertain only when the evidence is genuinely split. Do not start subagents.',
-    '- Return one verdict per finding id: verdict, reasoning (two to four sentences) and evidence (the source or code location that decided it).',
+    '- Return one verdict per finding id: verdict, explanation (two to four sentences on what decided it) and evidence (the source or code location that decided it).',
   ].join('\n')
 }
 
@@ -309,7 +303,7 @@ function integratePrompt(done, failed) {
     '## Rules',
     '- A high-impact finding that was refuted is not a finding; record it under dead ends or as a refuted candidate. An uncertain one becomes an open question.',
     '- Failed tasks leave their questions open. Add raised questions only if they matter to the brief; the brief is the ceiling.',
-    '- Carry over everything still valid. Only the notes, checks, verdicts and current state are evidence; add no knowledge of your own. When the document grows long, merge related lines instead of dropping them.',
+    '- Carry over everything still valid. Only the notes, checks, verdicts, current state and the brief\'s "## Answers" section are evidence; add no knowledge of your own. Close a question that "## Answers" settles, citing "brief: Answers". When the document grows long, merge related lines instead of dropping them.',
     '- progress counts what is new this round: findings, candidates, decisions, questions resolved, defects confirmed or refuted. suggest_done is true when no open question that matters to the deliverable remains.',
     '- summary is one line of at most 200 characters, and resolved_questions lists question ids only (such as "Q3"). The details belong in the state document; the summary is what the orchestrator keeps from this round.',
     '- Do not start subagents.',
@@ -363,7 +357,7 @@ const results = await pipeline(
       verdicts: work.high_impact.map((finding) => ({
         id: finding.id,
         statement: finding.statement,
-        ...(byId.get(finding.id) ?? { verdict: 'uncertain', reasoning: 'the skeptic returned no verdict', evidence: '' }),
+        ...(byId.get(finding.id) ?? { verdict: 'uncertain', explanation: 'the skeptic returned no verdict', evidence: '' }),
       })),
     }
   },

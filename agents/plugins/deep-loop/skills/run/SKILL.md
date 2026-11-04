@@ -30,7 +30,8 @@ description: deep-loop の作業ディレクトリを受け取り、1 ラウン�
    | integrator | opus | high |
    | writer | opus | xhigh |
 
-4. `DIR/journal.jsonl` があれば読み、`"round"` を持つ行の数を完了したラウンド数にする。
+4. `DIR/journal.jsonl` があれば読み、`"status": "ok"` の行の数を完了したラウンド数にする。
+   `"status"` が `failed` か `done` の行があれば、ラウンドはもう打ち切っているので、残りのラウンドは回さずに成果物へ進む。
    `"final": true` の行があれば、成果物まで済んでいるので何もせずに終える。
 
 ## ラウンドを回す
@@ -68,7 +69,7 @@ description: deep-loop の作業ディレクトリを受け取り、1 ラウン�
    ```json
    {"round": 1, "status": "ok", "summary": "...", "progress": 5, "open_questions": 3, "resolved_questions": ["Q1"], "verdicts": {"confirmed": 2, "refuted": 1, "uncertain": 0}, "failed": [], "outputTokens": 123456}
    ```
-   journal に行が書かれたラウンドだけを完了と見なす。state の差し替えより後に書くので、間で落ちたら新しい state で同じラウンドをやり直す。
+   journal に `"status": "ok"` の行が書かれたラウンドだけを完了と見なす。state の差し替えより後に書くので、間で落ちたら新しい state で同じラウンドをやり直す。
 6. `progress` が 0 なら、次のラウンドを回しても同じ結果になるので打ち切る。
    `suggest_done` が true でも打ち切らない。次のラウンドの planner が、本当に終えてよいかを state から判断する。
 
