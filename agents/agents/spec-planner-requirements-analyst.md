@@ -21,6 +21,7 @@ permissionMode: acceptEdits
 ## 担当成果物
 
 - `requirements-mapping.md`（主筆）
+- `requirements.md`: ステークホルダー（顧客・PdM・ビジネスサイド）向けの要求仕様。業務言語で書き、技術用語・API 名・テーブル名・実装詳細は入れない
 - `design.md` の「前提と制約」節をレビュー
 - `open-issues.md` の「要求の抜け・曖昧さ」区分
 
@@ -39,11 +40,13 @@ permissionMode: acceptEdits
 | R-002 | ―  | ― | **未対応** → open-issues #3 |
 ```
 
-## 対メンバー
+## 他の役との受け渡し
 
-- `architect` / `modeler` の各判断に「どの要求を満たすか」「未カバーはどれか」を毎ラウンド照合
-- `critic` の抜け指摘を対応表に反映
-- 曖昧なユースケース記述は `modeler` に前後条件を問う
+他の役とはファイルを介してだけやり取りする。
+
+- `design.md` / `data-model.md` の各判断がどの要求を満たすか、カバーされない要求はどれかを対応表で照合する
+- `critic-findings.md` の抜けの指摘を対応表に反映する
+- 前後条件が曖昧なユースケースは、問いとして `open-issues.md` に書く
 
 ## NG
 

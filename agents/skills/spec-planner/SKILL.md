@@ -13,17 +13,16 @@ allowed-tools: Read, Write, Edit, Glob, Grep, Bash, Agent, AskUserQuestion, WebF
 あなたはこのスキルのファシリテーター（**オーケストレーター**）として動く。
 入力された MTG 議事録（ローカルファイル or Google Docs URL）と既存の要求・要件文書、自然文の指示を取り込み、**単発 subagent 逐次フロー**（architect / modeler / requirements-analyst / critic / scribe を 1 体ごとに `Agent` tool で呼び出し、critic blocker ゼロまで needs-revise ループ）を回したうえで、最終成果物を指定された Notion DB に親ページ + 子ページ構成で同期する。
 
-**Agent-Team は使わない**。`TeamCreate` / `SendMessage` / `TeamDelete` は呼ばない。subagent 呼び出し契約（10 件必須項目 / model 振り分け / 戻り値最小化 / critic 専用契約 / 全文 Read 禁止）は [docs/subagent-contract.md](./docs/subagent-contract.md) に集約してある。本 SKILL では再掲しない。
+subagent は毎回 `Agent` tool を新しく呼んで起こし、`SendMessage` で続けない。subagent 呼び出し契約（10 件必須項目 / model 振り分け / 戻り値最小化 / critic 専用契約 / 全文 Read 禁止）は [docs/subagent-contract.md](./docs/subagent-contract.md) に集約してある。本 SKILL では再掲しない。
 
-## このスキルが Opus 4.7 で動く前提
+## 運用の前提
 
-Opus 4.7 の挙動（subagent を控えめに spawn / tool より推論優先 / effort 厳格 / 字義通り解釈）に整合させた方針:
+次の方針で運用する:
 
 - **単発 subagent 逐次フロー**は変えない。MTG 取り込みと Notion 同期もメイン（あなた）が直接やる
 - **指示は字義通り**: 「ついでに同期して」「適切に取り込んで」等の曖昧語をメインの内部判断でも使わない。各フェーズで何を / どのファイルに / どの形式で書くかを毎回明示する
-- **思考深度の steer**: MTG 議事の取り込みは「Respond directly. 既知形式の正規化」、設計判断は既存スキルと同じく architect / 最終 critic だけ「Think carefully step-by-step」
 - **コンテキスト前出し**: subagent に「議事録を直接 Read して判断して」と委ねない。本スキルは MTG 議事を `meeting-decisions.md` に正規化し、analyst の入力として渡す。Gemini トランスクリプトをそのまま subagent に投げない
-- **メインのナレーション抑制**: フェーズ間の "now I will..." 系の前置きを書かない。各フェーズ完了時に `task-state.md` を 1 回 Edit + 1 行報告だけ
+- **フェーズ完了時の報告**: 各フェーズ完了時に `task-state.md` を 1 回 Edit し、ユーザーへ 1 行で報告する
 
 ## 入力
 
@@ -69,25 +68,15 @@ order-cancel について、5/10 の Gemini ノートと ./docs/req.md を参考
 
 メイン（あなた）は `$ARGUMENTS` 全体を 1 度だけ解析し、以下を抽出する。subagent には渡さず、メインの内部状態として `task-state.md` の `## Notes` に **`extracted: ...`** 1 行で記録する。
 
-#### 抽出ルール（決定的・ヒューリスティック）
+#### 抽出ルール
 
-優先順位は上から順に評価し、明示キーがあれば自然文抽出より優先する:
+明示キー（`slug:` / `meetings:` / `base:` / `notion:`）があればそれを採用し、残りを純粋な指示文とする。明示キーの無い部分は文意から読み取る:
 
-1. **明示キーの先取り**: `slug:` / `meetings:` / `base:` / `notion:` が `$ARGUMENTS` に書かれていれば、そのキー部分を切り出して採用し、残りを「純粋な指示文」とみなす（後方互換ルート）
-
-2. **明示キーが無い場合の自然文抽出**:
-
-   - **ローカルパス検出**: `(?:\./|/|~/)[^\s,]+\.(md|txt|json|pdf|docx|html)` または既知拡張子で終わる絶対 / 相対パスを正規表現で抽出。文脈語（「参考」「ベース」「base」「既存」「資料」「要件」「設計書」が近接）と組み合わせて **base 候補**。「議事」「メモ」「MTG」「ミーティング」「打合せ」が近接していれば **meetings 候補**
-
-   - **URL 検出**: `https?://[^\s,]+` を抽出。`docs.google.com/document/d/` を含むものは **meetings 候補**（Google Docs ルート）。それ以外は文脈で base / meetings を判定。判別困難なら meetings 寄り
-
-   - **MTG 自然文クエリ検出**: 文中から「<日付表現>」+「MTG / ミーティング / 打合せ / Gemini ノート / 議事 / Weekly Standup / Sync / Review 等」のパターンを抽出。日付表現は `YYYY-MM-DD` / `M/D` / `M月D日` / 曜日 / 「昨日」「先週」「今月頭」等の相対表現を網羅。同種のパターンが複数あればすべて **meetings 候補**
-
-   - **slug 候補抽出**: `./spec-planner-output/` 配下のディレクトリ名を全件取得し、`$ARGUMENTS` 内の語と完全一致 / kebab-case 部分一致を試みる。一致があれば **slug 候補** として採用。新規なら「<キーワード>の設計」「新規で <名前>」等のパターンから kebab-case の slug を推測（例: 「在庫予約の設計を起こしたい」→ `inventory-reservation`）
-
-   - **Notion 同期スキップ検出**: 「Notion に上げない」「同期しない」「同期不要」「ローカルだけ」「ローカル完結」「sync skip」「同期は後で」等のパターンを文字列マッチ。1 つでもヒットすれば **notion: skip** として扱う
-
-3. **残りの純粋な指示文**: 上記で抽出された区間を `$ARGUMENTS` から除去した残文字列。これが「純粋な指示文」となる。空または極端に短い場合（10 文字未満かつ意図不明）は、`meetings` も `base` も無ければ中断してユーザーに具体の意図を問う
+- ローカルパスと URL は、近くの語が参考資料（「参考」「既存」「要件」「設計書」等）を指せば base、議事（「MTG」「議事」「メモ」「打合せ」等）を指せば meetings とする。`docs.google.com/document/d/` の URL は meetings とする。どちらとも読めなければ meetings とする
+- 日付と MTG 名の組（「先週月曜の Weekly Standup」等）は meetings の自然文クエリとする
+- slug は `./spec-planner-output/` 配下の既存ディレクトリ名と一致する語を優先し、無ければ指示文から kebab-case で作る（例: 「在庫予約の設計を起こしたい」→ `inventory-reservation`）
+- Notion に上げない意図（「同期しないで」「ローカルだけ」等）が読み取れれば notion: skip とする
+- 上記を除いた残りが純粋な指示文になる。意図が読み取れず、meetings と base のどちらも無ければ、中断してユーザーに具体の意図を問う
 
 #### 抽出結果の通知
 
@@ -165,7 +154,7 @@ cp ~/.claude/skills/spec-planner/templates/notion-sync-state.md    <WORKDIR>/not
 
 ### 0-5. Notion 出力先の解決
 
-`$ARGUMENTS` に `notion: skip` が含まれる場合は**このステップ全体をスキップ**し、`task-state.md` の `## Notes` に `notion-sync: skipped (user-opted-out)` を記録する。フェーズ 2 はスキップされる。
+0-0 の抽出で notion: skip になった場合（明示キー `notion: skip` を含む）は**このステップ全体をスキップ**し、`task-state.md` の `## Notes` に `notion-sync: skipped (user-opted-out)` を記録する。フェーズ 2 はスキップされる。
 
 それ以外は `<WORKDIR>/notion-config.json` の有無で分岐:
 
@@ -255,7 +244,7 @@ Google Docs の場合の `fileId` 抽出は `/document/d/([A-Za-z0-9_-]+)` で U
 - `## Base Documents`: base パスがあれば一覧、無ければ「該当なし」
 - `## Ad-hoc Instructions`: `$ARGUMENTS` の自然文指示本文（slug/meetings/base キーを除いた残り）を全文転記
 
-メイン（あなた）はここまでを直接 Edit で行う。subagent には任せない（取り込みは推論より字義通りの転写が中心。Opus 4.7 が本体で処理した方が判断のブレが少ない）。
+メイン（あなた）はここまでを直接 Edit で行い、subagent には任せない。取り込みの中心は推論ではなく字義どおりの転写なので、メインで直接処理すれば判断のブレを抑えられる。
 
 ---
 
@@ -263,7 +252,7 @@ Google Docs の場合の `fileId` 抽出は `/document/d/([A-Za-z0-9_-]+)` で U
 
 本スキルは単発 subagent 逐次フローを内部で回す。設計フローの詳細は分割して docs/ 配下に置く:
 
-- **共通 subagent 呼び出し契約**（10 件必須項目 / model 振り分け / critic 専用契約 / sync 固有追加項目 / Opus 4.7 前提）: [docs/subagent-contract.md](./docs/subagent-contract.md)
+- **共通 subagent 呼び出し契約**（10 件必須項目 / model 振り分け / critic 専用契約 / 追加項目）: [docs/subagent-contract.md](./docs/subagent-contract.md)
 - **新規モード逐次フロー**: [docs/new-mode-flow.md](./docs/new-mode-flow.md)
 - **改訂モード逐次フロー**: [docs/revise-mode-flow.md](./docs/revise-mode-flow.md)
 
@@ -371,9 +360,8 @@ Notion MCP が利用不可（接続エラー / 権限拒否）の場合は、推
 ## 運営上の厳守事項
 
 - **subagent 呼び出し契約は [docs/subagent-contract.md](./docs/subagent-contract.md) に集約**。本スキル固有の追加（MTG 議事優先 / 根拠タグ / 過去比較禁止）も同ファイル内に内包済み
-- **戻り値最小化**: 各 subagent の戻り値は `wrote: / summary: / findings_count:` 形式で最大 200 tokens
-- **ファイル全文 Read 禁止**: メインも subagent も、必要なセクションだけ offset/limit で Read。Grep は cross-file 整合検証用途
-- **Agent-Team を使わない**: `TeamCreate` / `SendMessage` / `TeamDelete` を呼ばない
+- **戻り値最小化**: 各 subagent の戻り値は `wrote: / summary: / findings_count:` の形式だけにする
+- **必要なセクションだけ Read**: メインと subagent のどちらも、全文ではなく必要なセクションを offset/limit で Read する。Grep は位置探しと cross-file 整合検証に使う
 - **状態はファイルに**: `task-state.md` / `critic-findings.md` / `notion-sync-state.md` に書く。メインのコンテキストに累積させない
 - **AskUserQuestion は最小限**: 0-1 のスラグ曖昧時、0-5 の Notion 設定未保存時、0-7 の自然文クエリで候補 2〜4 件の選択時。これらは可能なら**まとめて 1 回**の `AskUserQuestion`（複数 question を 1 呼び出しに格納）で済ませる。候補 1 件は自動採用 / 候補ゼロまたは 5 件以上は中断（推測で進めない）
 - **0-0 の抽出結果通知は確認待ちにしない**: 抽出結果は 1 メッセージで提示するが、`AskUserQuestion` を使わず後続フェーズに即進む。誤抽出はユーザーが後で指摘する前提（フリクション最小化のため）
@@ -387,13 +375,13 @@ Notion MCP が利用不可（接続エラー / 権限拒否）の場合は、推
 - **Ad-hoc Instructions の累積禁止**: 改訂モードで `meeting-decisions.md` の `## Ad-hoc Instructions` セクションは今回分で完全に置換する。前回分は `revision-history.md` の前回 Revision に移送して `meeting-decisions.md` からは削除する
 - **minutes.md は新規モードのみ書く**: 改訂モードでは `revision-history.md` に集約し、`minutes.md` は不可侵（Write/Edit 禁止）
 - **`meeting-decisions.md` は Notion 同期しない**: MTG 議事タイムラインは「前提知識なしで読める仕様」原則に反する。ローカル運用ファイルとして `<WORKDIR>` 内に閉じる
-- **字義通り解釈の徹底**: prompt に「同様に」「適切に」「自動的に」「必要に応じて」を書かない。Opus 4.7 は曖昧語を補完しない
+- **字義通り解釈の徹底**: prompt に「同様に」「適切に」「自動的に」「必要に応じて」を書かない。subagent は prompt に書かれていない意図を補わないため
 - **$ARGUMENTS が薄い場合**: 即座に止めて、何を取り込み何を反映したいのかを問う。推測で進めない
 
 ## 参照
 
-- 単発 subagent 呼び出し契約（10 件必須項目 / model 振り分け / critic 専用契約 / sync 固有追加 / Opus 4.7 前提）: [docs/subagent-contract.md](./docs/subagent-contract.md)
+- 単発 subagent 呼び出し契約（10 件必須項目 / model 振り分け / critic 専用契約 / 追加項目）: [docs/subagent-contract.md](./docs/subagent-contract.md)
 - 新規モード逐次フロー（ステップ 1〜8）: [docs/new-mode-flow.md](./docs/new-mode-flow.md)
 - 改訂モード逐次フロー（ステップ 1〜6）: [docs/revise-mode-flow.md](./docs/revise-mode-flow.md)
-- subagent 定義: `~/.claude/agents/spec-planner-*.md`（architect / modeler / requirements-analyst / critic / scribe / japan-ehr-specialist / japan-receipt-computer-specialist）
+- subagent 定義: `~/.claude/agents/spec-planner-*.md`（architect / modeler / requirements-analyst / critic / scribe）。ドメイン専門家は `~/.claude/agents/japan-ehr-specialist.md` と `~/.claude/agents/japan-receipt-computer-specialist.md`
 - テンプレート: `~/.claude/skills/spec-planner/templates/`
