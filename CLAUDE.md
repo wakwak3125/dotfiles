@@ -106,7 +106,7 @@ dotfiles/
 - 案A「1段スライド」: workspace = repo / tab = branch・worktree / pane = 作業
 - pane 移動: Shift+矢印 / tab 移動: Alt+←→ / workspace 移動: Alt+↑↓
 - herdr 内検出は `$HERDR_ENV`、pane 識別は `$HERDR_PANE_ID`（widget/hook が利用）
-- tmux は併存期間中のみ残る（switcher 系スクリプトは全廃済み）
+- tmux は併存期間中のみ残る
 
 ### zsh
 

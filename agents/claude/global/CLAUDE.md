@@ -3,14 +3,10 @@
 このファイルは全プロジェクト共通の個人用エージェント指示です。
 CLAUDE.md (Claude Code) と AGENTS.md (Codex) は同一内容を保つこと。エージェント固有の指示が必要なときだけ分岐させる。
 
-## 大事なこと
-
-ユーザーのことはワクさんと呼ぶこと
-
 ## 基本方針
 
 - 応答は日本語。コード・識別子は英語。コードコメントは日本語。
-- コミットメッセージ・PR タイトルは日本語、conventional commits スタイルで書く
+- コミットメッセージは日本語、conventional commits スタイルで書く
 - 簡潔で実用的な回答を優先する。冗長な説明は不要
 - コード変更時は既存のコードスタイル・パターンに従う
 - Linear / Notion / 社内ブログなど日本語の設計ドキュメント・技術文書を書く/推敲するときは、必ず japanese-tech-writing skill を使うこと
@@ -39,10 +35,10 @@ CLAUDE.md (Claude Code) と AGENTS.md (Codex) は同一内容を保つこと。�
 
 ## 開発環境
 
-- **OS**: macOS (一部 Linux 対応あり)
+- **OS**: macOS / Ubuntu (ネイティブ・WSL2)
 - **エディタ**: Neovim (lazy.nvim, 2スペースインデント)
 - **シェル**: zsh + sheldon (プラグイン管理)
-- **ターミナル**: herdr (prefix: Ctrl+T; tmux から移行中)
+- **マルチプレクサ**: herdr (prefix: Ctrl+T; tmux から移行中)
 - **ランタイム管理**: mise (Go, Java 21, Node.js, Rust)
 - **プロンプト**: Starship
 
